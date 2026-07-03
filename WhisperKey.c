@@ -20,6 +20,49 @@ char wav_path[MAXPATHLEN];
 char txt_path[MAXPATHLEN];
 const char *model_path = NULL;
 
+// default microphone device ID for macOS
+char mic_device_id[16] = ":0";
+
+void detect_microphone_device() {
+    printf("[INIT] Detecting microphone...\n");
+    
+    // use ffmpeg to list audio devices on macOS
+    FILE *fp = popen("ffmpeg -f avfoundation -list_devices true -i \"\" 2>&1", "r");
+    if (!fp) {
+        printf("[INIT] Failed to run ffmpeg device scan. Using default %s\n", mic_device_id);
+        return;
+    }
+
+    char line[1024];
+    bool in_audio_section = false;
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (strstr(line, "AVFoundation audio devices:")) {
+            in_audio_section = true;
+            continue;
+        }
+
+        if (in_audio_section) {
+            // Ищем ключевые слова (макось обычно пишет с большой буквы, но подстрахуемся)
+            if (strstr(line, "Microphone") || strstr(line, "microphone") || strstr(line, "Микрофон")) {
+                
+                // [avfoundation @ 0x14f...] [2] MacBook Pro Microphone
+                char *first_bracket = strchr(line, '[');
+                if (first_bracket) {
+                    char *second_bracket = strchr(first_bracket + 1, '[');
+                    if (second_bracket) {
+                        int idx = atoi(second_bracket + 1);
+                        snprintf(mic_device_id, sizeof(mic_device_id), ":%d", idx);
+                        printf("[INIT] Auto-detected microphone index: %s\n", mic_device_id);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    pclose(fp);
+}
+
 // ==========================================
 // 1. AUDIO INDICATORS
 // ==========================================
@@ -44,8 +87,10 @@ void start_audio_recording() {
     recording_pid = fork();
     if (recording_pid == 0) {
 
-        char *args[] = {"ffmpeg", "-f", "avfoundation", "-i", ":1", "-y",
-                        wav_path, "-nostats", "-nostdin", "-loglevel", "0", NULL};
+        char *args[] = {"ffmpeg", "-f", "avfoundation", "-i", mic_device_id, "-y",
+                        // "-ar", "16000", "-ac", "1", "-y",
+                        // wav_path, "-nostats", "-nostdin", "-loglevel", "0", NULL};
+                        wav_path, "-nostdin", NULL}; // debug info
         execvp(args[0], args);
         exit(1);
     } else if (recording_pid > 0) {
@@ -71,7 +116,8 @@ void run_whisper_transcription() {
     char cmd[2048];
 
     snprintf(cmd, sizeof(cmd), 
-             "whisper-cli -m '%s' -l ru -f '%s' -otxt -mc 0 -et 2.8 > /dev/null 2>&1", 
+             "whisper-cli -m '%s' -l ru -f '%s' -otxt -mc 0 -et 2.8", //debug info
+            //  "whisper-cli -m '%s' -l ru -f '%s' -otxt -mc 0 -et 2.8 > /dev/null 2>&1", 
              model_path, wav_path);
     
     system(cmd);
@@ -136,7 +182,13 @@ void cleanup_temp_files() {
 void* process_pipeline_thread(void* arg) {
     pid_t pid_to_kill = (pid_t)(uintptr_t)arg;
 
+    // 1. СНАЧАЛА жестко гасим запись
     stop_audio_recording(pid_to_kill);
+    
+    // 2. И ТОЛЬКО ТЕПЕРЬ пикаем, что пошла обработка
+    play_sound_processing(); 
+
+    // 3. Запускаем ИИ
     run_whisper_transcription();
 
     if (copy_file_to_clipboard(txt_path)) {
@@ -144,7 +196,7 @@ void* process_pipeline_thread(void* arg) {
         play_sound_done(); 
     }
     
-    cleanup_temp_files();
+    // cleanup_temp_files();
     return NULL;
 }
 
@@ -172,8 +224,6 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
             pid_t pid_to_kill = recording_pid;
             recording_pid = -1;
 
-            play_sound_processing(); 
-
             pthread_t worker;
             pthread_create(&worker, NULL, process_pipeline_thread, (void*)(uintptr_t)pid_to_kill);
             pthread_detach(worker);
@@ -192,6 +242,8 @@ int parse_recognition_model(int argc, char *argv[])
         return 1;
     }
     model_path = argv[1];
+    printf("[INIT] Model path: %s\n", model_path);
+
     
     return 0;
 
@@ -200,14 +252,14 @@ int parse_recognition_model(int argc, char *argv[])
 int create_temp_file_names()
 {
     const char *tmp_dir = getenv("TMPDIR");
-    if (!tmp_dir)
+    // if (!tmp_dir)
         tmp_dir = "/tmp/"; // Fallback, если TMPDIR не задан
 
     snprintf(wav_path, sizeof(wav_path), "%swhisperkey_%d.wav", tmp_dir, getpid());
     snprintf(txt_path, sizeof(txt_path), "%swhisperkey_%d.wav.txt", tmp_dir, getpid());
 
-    printf("[INIT] Model path: %s\n", model_path);
     printf("[INIT] Temp audio: %s\n", wav_path);
+    printf("[INIT] Temp text: %s\n", txt_path);
 
     return 0;
 }
@@ -218,6 +270,13 @@ int create_temp_file_names()
 
 int main(int argc, char *argv[]) {
 
+    // force the program to use UTF-8 encoding for all system calls (including pbcopy)
+    setenv("LANG", "en_US.UTF-8", 1);
+
+    // Disable buffering for stdout and stderr to ensure immediate output
+    setvbuf(stdout, NULL, _IONBF, 0); 
+    setvbuf(stderr, NULL, _IONBF, 0);
+    
     if (parse_recognition_model(argc, argv) > 0) {
         exit(1);
     }
@@ -225,6 +284,8 @@ int main(int argc, char *argv[]) {
     if (create_temp_file_names() > 0) {
         exit(1);
     }
+
+    detect_microphone_device();
 
     CGEventMask eventMask = (1 << kCGEventKeyDown);
     eventTap = CGEventTapCreate(
