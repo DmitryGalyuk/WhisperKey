@@ -12,7 +12,7 @@
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "-framework",
-                "ApplicationServices"
+                "ApplicationServices",
             ],
             "options": {
                 "cwd": "${fileDirname}"
