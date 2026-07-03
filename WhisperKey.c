@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <sys/param.h> // Для MAXPATHLEN
+#include <sys/param.h>
 
 #define TARGET_KEYCODE 176 // Microphone button keycode
 
@@ -15,7 +15,7 @@ pid_t recording_pid = -1;
 
 CFMachPortRef eventTap;
 
-// Глобальные пути, которые мы сгенерируем при старте
+// global variables for temporary file paths
 char wav_path[MAXPATHLEN];
 char txt_path[MAXPATHLEN];
 const char *model_path = NULL;
@@ -43,7 +43,7 @@ void play_sound_done() {
 void start_audio_recording() {
     recording_pid = fork();
     if (recording_pid == 0) {
-        // Используем сгенерированный путь wav_path
+
         char *args[] = {"ffmpeg", "-f", "avfoundation", "-i", ":1", "-y",
                         wav_path, "-nostats", "-nostdin", "-loglevel", "0", NULL};
         execvp(args[0], args);
@@ -69,7 +69,7 @@ void run_whisper_transcription() {
     printf("[AI] Running Whisper with model: %s\n", model_path);
     
     char cmd[2048];
-    // Собираем команду динамически, подставляя путь к модели и временному файлу
+
     snprintf(cmd, sizeof(cmd), 
              "whisper-cli -m '%s' -l ru -f '%s' -otxt -mc 0 -et 2.8 > /dev/null 2>&1", 
              model_path, wav_path);
@@ -124,7 +124,6 @@ void emulate_keyboard_paste() {
 }
 
 void cleanup_temp_files() {
-    // Системный вызов unlink удаляет файлы с диска
     unlink(wav_path);
     unlink(txt_path);
     printf("[CLEANUP] Temporary files removed.\n");
@@ -145,7 +144,7 @@ void* process_pipeline_thread(void* arg) {
         play_sound_done(); 
     }
     
-    cleanup_temp_files(); // Убираем за собой в любом случае
+    cleanup_temp_files();
     return NULL;
 }
 
@@ -200,14 +199,10 @@ int parse_recognition_model(int argc, char *argv[])
 
 int create_temp_file_names()
 {
-    // Проверяем аргументы командной строки
- 
-    // Инициализируем пути для временных файлов
     const char *tmp_dir = getenv("TMPDIR");
     if (!tmp_dir)
         tmp_dir = "/tmp/"; // Fallback, если TMPDIR не задан
 
-    // Генерируем уникальные имена на основе PID нашего демона
     snprintf(wav_path, sizeof(wav_path), "%swhisperkey_%d.wav", tmp_dir, getpid());
     snprintf(txt_path, sizeof(txt_path), "%swhisperkey_%d.wav.txt", tmp_dir, getpid());
 
