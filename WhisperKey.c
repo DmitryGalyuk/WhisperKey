@@ -13,6 +13,8 @@
 bool is_recording = false;
 pid_t recording_pid = -1;
 
+CFMachPortRef eventTap;
+
 // Глобальные пути, которые мы сгенерируем при старте
 char wav_path[MAXPATHLEN];
 char txt_path[MAXPATHLEN];
@@ -153,7 +155,7 @@ void* process_pipeline_thread(void* arg) {
 
 CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
     if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
-        CGEventTapEnable(proxy, true);
+        CGEventTapEnable(eventTap, true);
         return event;
     }
 
@@ -182,22 +184,28 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
     return event;
 }
 
-// ==========================================
-// 7. MAIN
-// ==========================================
-
-int main(int argc, char *argv[]) {
-    // Проверяем аргументы командной строки
-    if (argc < 2) {
+int parse_recognition_model(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
         fprintf(stderr, "Usage: %s <path_to_whisper_model.bin>\n", argv[0]);
         fprintf(stderr, "Example: %s /opt/homebrew/share/whisper-cpp/models/ggml-small.bin\n", argv[0]);
         return 1;
     }
     model_path = argv[1];
+    
+    return 0;
 
+}
+
+int create_temp_file_names()
+{
+    // Проверяем аргументы командной строки
+ 
     // Инициализируем пути для временных файлов
     const char *tmp_dir = getenv("TMPDIR");
-    if (!tmp_dir) tmp_dir = "/tmp/"; // Fallback, если TMPDIR не задан
+    if (!tmp_dir)
+        tmp_dir = "/tmp/"; // Fallback, если TMPDIR не задан
 
     // Генерируем уникальные имена на основе PID нашего демона
     snprintf(wav_path, sizeof(wav_path), "%swhisperkey_%d.wav", tmp_dir, getpid());
@@ -206,8 +214,25 @@ int main(int argc, char *argv[]) {
     printf("[INIT] Model path: %s\n", model_path);
     printf("[INIT] Temp audio: %s\n", wav_path);
 
+    return 0;
+}
+
+// ==========================================
+// 7. MAIN
+// ==========================================
+
+int main(int argc, char *argv[]) {
+
+    if (parse_recognition_model(argc, argv) > 0) {
+        exit(1);
+    }
+
+    if (create_temp_file_names() > 0) {
+        exit(1);
+    }
+
     CGEventMask eventMask = (1 << kCGEventKeyDown);
-    CFMachPortRef eventTap = CGEventTapCreate(
+    eventTap = CGEventTapCreate(
         kCGSessionEventTap, kCGHeadInsertEventTap, 0, eventMask, eventCallback, NULL);
 
     if (!eventTap) {
@@ -223,3 +248,4 @@ int main(int argc, char *argv[]) {
     CFRunLoopRun();
     return 0;
 }
+
