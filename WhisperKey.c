@@ -6,18 +6,23 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/param.h> // Для MAXPATHLEN
 
 #define TARGET_KEYCODE 176 // Microphone button keycode
 
 bool is_recording = false;
 pid_t recording_pid = -1;
 
+// Глобальные пути, которые мы сгенерируем при старте
+char wav_path[MAXPATHLEN];
+char txt_path[MAXPATHLEN];
+const char *model_path = NULL;
+
 // ==========================================
-// 1. АУДИО ИНДИКАТОРЫ (ЗВУКИ СИСТЕМЫ)
+// 1. AUDIO INDICATORS
 // ==========================================
 
 void play_sound_start() {
-    // Амперсанд в конце обязателен, чтобы звук играл в фоне и не тормозил хук
     system("afplay /System/Library/Sounds/Tink.aiff &");
 }
 
@@ -30,14 +35,15 @@ void play_sound_done() {
 }
 
 // ==========================================
-// 2. РАБОТА СО ЗВУКОМ (FFMPEG)
+// 2. AUDIO RECORDING (FFMPEG)
 // ==========================================
 
 void start_audio_recording() {
     recording_pid = fork();
     if (recording_pid == 0) {
+        // Используем сгенерированный путь wav_path
         char *args[] = {"ffmpeg", "-f", "avfoundation", "-i", ":1", "-y",
-                        "./voice.wav", "-nostats", "-nostdin", "-loglevel", "0", NULL};
+                        wav_path, "-nostats", "-nostdin", "-loglevel", "0", NULL};
         execvp(args[0], args);
         exit(1);
     } else if (recording_pid > 0) {
@@ -54,16 +60,23 @@ void stop_audio_recording(pid_t pid) {
 }
 
 // ==========================================
-// 3. РАСПОЗНАВАНИЕ (WHISPER)
+// 3. TRANSCRIPTION (WHISPER)
 // ==========================================
 
 void run_whisper_transcription() {
-    printf("[AI] Running Whisper...\n");
-    system("whisper-cli -m /opt/homebrew/share/whisper-cpp/models/ggml-small.bin -l ru -f ./voice.wav -otxt -mc 0 -et 2.8 > /dev/null 2>&1");
+    printf("[AI] Running Whisper with model: %s\n", model_path);
+    
+    char cmd[2048];
+    // Собираем команду динамически, подставляя путь к модели и временному файлу
+    snprintf(cmd, sizeof(cmd), 
+             "whisper-cli -m '%s' -l ru -f '%s' -otxt -mc 0 -et 2.8 > /dev/null 2>&1", 
+             model_path, wav_path);
+    
+    system(cmd);
 }
 
 // ==========================================
-// 4. БУФЕР ОБМЕНА И ВВОД
+// 4. CLIPBOARD & CLEANUP
 // ==========================================
 
 bool copy_file_to_clipboard(const char* filepath) {
@@ -108,8 +121,15 @@ void emulate_keyboard_paste() {
     printf("[CLIPBOARD] Text pasted via Cmd+V.\n");
 }
 
+void cleanup_temp_files() {
+    // Системный вызов unlink удаляет файлы с диска
+    unlink(wav_path);
+    unlink(txt_path);
+    printf("[CLEANUP] Temporary files removed.\n");
+}
+
 // ==========================================
-// 5. ОРКЕСТРАТОР (РАБОЧИЙ ПОТОК)
+// 5. WORKER THREAD (ORCHESTRATOR)
 // ==========================================
 
 void* process_pipeline_thread(void* arg) {
@@ -118,16 +138,17 @@ void* process_pipeline_thread(void* arg) {
     stop_audio_recording(pid_to_kill);
     run_whisper_transcription();
 
-    if (copy_file_to_clipboard("./voice.wav.txt")) {
+    if (copy_file_to_clipboard(txt_path)) {
         emulate_keyboard_paste();
-        play_sound_done(); // Сигнализируем, что всё готово и вставлено
+        play_sound_done(); 
     }
     
+    cleanup_temp_files(); // Убираем за собой в любом случае
     return NULL;
 }
 
 // ==========================================
-// 6. СИСТЕМНЫЙ ХУК (ОБРАБОТЧИК КЛАВИАТУРЫ)
+// 6. EVENT HANDLER
 // ==========================================
 
 CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
@@ -143,16 +164,15 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
 
         if (!is_recording) {
             is_recording = true;
-            play_sound_start();      // 1. Озвучиваем старт
-            start_audio_recording(); // 2. Начинаем писать звук
+            play_sound_start();      
+            start_audio_recording(); 
         } else {
             is_recording = false;
             pid_t pid_to_kill = recording_pid;
             recording_pid = -1;
 
-            play_sound_processing(); // Озвучиваем уход в обработку
+            play_sound_processing(); 
 
-            // Отправляем всю тяжелую работу в отдельный поток
             pthread_t worker;
             pthread_create(&worker, NULL, process_pipeline_thread, (void*)(uintptr_t)pid_to_kill);
             pthread_detach(worker);
@@ -166,7 +186,26 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
 // 7. MAIN
 // ==========================================
 
-int main() {
+int main(int argc, char *argv[]) {
+    // Проверяем аргументы командной строки
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <path_to_whisper_model.bin>\n", argv[0]);
+        fprintf(stderr, "Example: %s /opt/homebrew/share/whisper-cpp/models/ggml-small.bin\n", argv[0]);
+        return 1;
+    }
+    model_path = argv[1];
+
+    // Инициализируем пути для временных файлов
+    const char *tmp_dir = getenv("TMPDIR");
+    if (!tmp_dir) tmp_dir = "/tmp/"; // Fallback, если TMPDIR не задан
+
+    // Генерируем уникальные имена на основе PID нашего демона
+    snprintf(wav_path, sizeof(wav_path), "%swhisperkey_%d.wav", tmp_dir, getpid());
+    snprintf(txt_path, sizeof(txt_path), "%swhisperkey_%d.wav.txt", tmp_dir, getpid());
+
+    printf("[INIT] Model path: %s\n", model_path);
+    printf("[INIT] Temp audio: %s\n", wav_path);
+
     CGEventMask eventMask = (1 << kCGEventKeyDown);
     CFMachPortRef eventTap = CGEventTapCreate(
         kCGSessionEventTap, kCGHeadInsertEventTap, 0, eventMask, eventCallback, NULL);
@@ -180,7 +219,7 @@ int main() {
     CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
     CGEventTapEnable(eventTap, true);
 
-    printf("Daemon running with audio feedback. Waiting for trigger key...\n");
+    printf("Daemon running. Waiting for trigger key...\n");
     CFRunLoopRun();
     return 0;
 }
