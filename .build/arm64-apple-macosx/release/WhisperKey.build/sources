@@ -1,0 +1,12 @@
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AppDelegate.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AudioCaptureManager.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/CooldownController.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/GlobalHotKeyMonitor.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/KeyboardInjector.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/ModelManager.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/OverlayWindow.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/SoundFeedback.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/StatusBarController.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/Types.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/WhisperEngine.swift
+/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/main.swift

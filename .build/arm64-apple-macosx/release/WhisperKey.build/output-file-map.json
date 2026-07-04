@@ -1,0 +1,79 @@
+{
+  "": {
+    "dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/WhisperKey.d",
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/WhisperKey.o",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/primary.swiftdeps"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AppDelegate.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AppDelegate.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AppDelegate~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AppDelegate.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AppDelegate.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AudioCaptureManager.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AudioCaptureManager.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AudioCaptureManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AudioCaptureManager.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/AudioCaptureManager.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/CooldownController.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/CooldownController.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/CooldownController~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/CooldownController.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/CooldownController.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/GlobalHotKeyMonitor.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/GlobalHotKeyMonitor.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/GlobalHotKeyMonitor~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/GlobalHotKeyMonitor.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/GlobalHotKeyMonitor.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/KeyboardInjector.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/KeyboardInjector.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/KeyboardInjector~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/KeyboardInjector.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/KeyboardInjector.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/ModelManager.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/ModelManager.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/ModelManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/ModelManager.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/ModelManager.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/OverlayWindow.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/OverlayWindow.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/OverlayWindow~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/OverlayWindow.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/OverlayWindow.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/SoundFeedback.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/SoundFeedback.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/SoundFeedback~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/SoundFeedback.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/SoundFeedback.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/StatusBarController.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/StatusBarController.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/StatusBarController~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/StatusBarController.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/StatusBarController.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/Types.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/Types.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/Types~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/Types.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/Types.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/WhisperEngine.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/WhisperEngine.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/WhisperEngine~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/WhisperEngine.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/WhisperEngine.dia"
+  },
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/main.swift": {
+    "object": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/main.swift.o",
+    "swiftmodule": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/main.swiftdeps",
+    "diagnostics": "/Users/dmitrygalyuk/Projects/WhisperKey/.build/arm64-apple-macosx/release/WhisperKey.build/main.dia"
+  }
+}

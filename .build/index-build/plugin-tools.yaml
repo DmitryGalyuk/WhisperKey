@@ -1,0 +1,51 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "CWhisper-arm64-apple-macosx-debug.module": ["<CWhisper-arm64-apple-macosx-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "WhisperKey-arm64-apple-macosx-debug.module": ["<WhisperKey-arm64-apple-macosx-debug.module>"]
+  "main": ["<WhisperKey-arm64-apple-macosx-debug.module>"]
+  "test": ["<WhisperKey-arm64-apple-macosx-debug.module>"]
+default: "main"
+nodes:
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/CWhisper/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/WhisperKey.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AppDelegate.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AudioCaptureManager.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/CooldownController.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/GlobalHotKeyMonitor.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/KeyboardInjector.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/Logger.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/ModelManager.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/OverlayWindow.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/SoundFeedback.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/StatusBarController.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/Types.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/WhisperEngine.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/main.swift"]
+    outputs: ["/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/WhisperKey.build/sources"]
+    description: "Write auxiliary file /Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/WhisperKey.build/sources"
+
+  "/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Library/Developer/CommandLineTools/usr/bin/swiftc"]
+    outputs: ["/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+
+  "<WhisperKey-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/Modules/WhisperKey.swiftmodule"]
+    outputs: ["<WhisperKey-arm64-apple-macosx-debug.module>"]
+
+  "C.WhisperKey-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AppDelegate.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/AudioCaptureManager.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/CooldownController.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/GlobalHotKeyMonitor.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/KeyboardInjector.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/Logger.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/ModelManager.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/OverlayWindow.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/SoundFeedback.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/StatusBarController.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/Types.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/WhisperEngine.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/main.swift","/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/CWhisper/include/whisper_wrapper.h","/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/WhisperKey.build/sources"]
+    outputs: ["/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/Modules/WhisperKey.swiftmodule"]
+    description: "Compiling Swift Module 'WhisperKey' (13 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","WhisperKey","-emit-dependencies","-emit-module","-emit-module-path","/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/Modules/WhisperKey.swiftmodule","-output-file-map","/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/WhisperKey.build/output-file-map.json","-incremental","@/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/WhisperKey.build/sources","-I","/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-Xcc","-fmodule-map-file=/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/CWhisper.build/module.modulemap","-Xcc","-I","-Xcc","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/CWhisper/include","-module-cache-path","/Users/dmitrygalyuk/Projects/WhisperKey/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","WhisperKey_main","-swift-version","5","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","whisperkey"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/dmitrygalyuk/Projects/WhisperKey/Sources/CWhisper/","/Users/dmitrygalyuk/Projects/WhisperKey/Sources/WhisperKey/","/Users/dmitrygalyuk/Projects/WhisperKey/Package.swift","/Users/dmitrygalyuk/Projects/WhisperKey/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

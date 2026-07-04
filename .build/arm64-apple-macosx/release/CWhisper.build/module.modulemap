@@ -1,0 +1,4 @@
+module CWhisper {
+    umbrella "/Users/dmitrygalyuk/Projects/WhisperKey/Sources/CWhisper/include"
+    export *
+}
