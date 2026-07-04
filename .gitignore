@@ -1,3 +1,19 @@
+.DS_Store
+
+# SwiftPM build artifacts
+.build/
+.swiftpm/
+Packages/
+
+# Generated audio debug files
 *.wav
 *.wav.txt
+
+# Local binaries
 bin/
+
+# Logs and editor state
+*.log
+*.swp
+*.tmp
+.vscode/
