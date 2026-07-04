@@ -89,6 +89,20 @@ void ensure_model_loaded() {
         LOG_INFO("Loading Whisper model into RAM...");
         
         struct whisper_context_params cparams = whisper_context_default_params();
+
+        cparams.use_gpu = false;
+        cparams.flash_attn = false;
+        cparams.gpu_device = -1;
+        cparams.dtw_token_timestamps = false;
+        cparams.dtw_aheads_preset = WHISPER_AHEADS_NONE;
+        cparams.dtw_n_top = 0;
+        cparams.dtw_aheads = (whisper_aheads){.n_heads = 0, .heads = NULL};
+        cparams.dtw_mem_size = 0;
+
+        char* ggmlBackendDir = "/opt/homebrew/opt/ggml/libexec";
+        setenv("GGML_BACKEND_PATH", ggmlBackendDir, 1);
+        ggml_backend_load_all_from_path(ggmlBackendDir);
+        LOG_INFO("[WhisperEngine] loaded ggml dynamic backends from %s", ggmlBackendDir);
         
         // IMPORTANT: Ensure this path is correct for your system!
         ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-small.bin", cparams);
@@ -149,35 +163,49 @@ void *audio_thread(void *arg) {
 
 // Callback, который будет вызываться при каждом нажатии клавиш
 CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *userInfo) {
-if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
+    (void)proxy;
+    (void)userInfo;
+
+    if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
         CGEventTapEnable(eventTap, true);
         return event;
     }
 
     CGKeyCode keycode = (CGKeyCode)CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
 
+    // Filter only for our key (176) and only for KeyDown (to avoid double triggers on repeat)
     if (keycode == HOTKEY_KEYCODE && type == kCGEventKeyDown) {
         if (CGEventGetIntegerValueField(event, kCGKeyboardEventAutorepeat)) return NULL;
 
-            LOG_INFO(">>> START RECORDING <<<");
+        // --- TOGGLE LOGIC ---
+        pthread_mutex_lock(&audio_mutex);
+        if (!is_recording) {
+            // START RECORDING
+            LOG_INFO(">>> TOGGLE: START RECORDING <<<");
             ensure_model_loaded();
             
-            pthread_mutex_lock(&audio_mutex);
-            is_recording = 1; 
-            pthread_cond_signal(&audio_cond);
-            pthread_mutex_unlock(&audio_mutex);
+            is_recording = 1;
+            pthread_cond_signal(&audio_cond); // Signal audio thread to wake up
             
             send_ui_command("show_mic");
             last_used_timestamp = time(NULL);
-    } else {
-            LOG_INFO(">>> STOP RECORDING <<<");
-            pthread_mutex_lock(&audio_mutex);
+        } else {
+            // STOP RECORDING
+            LOG_INFO(">>> TOGGLE: STOP RECORDING & PROCESS <<<");
+            
             is_recording = 0;
-            pthread_mutex_unlock(&audio_mutex);
+            pthread_cond_signal(&audio_cond); // Wake up to notice recording is 0
             
             send_ui_command("show_wait");
-            paste_text("Test Recognition String");
+            
+            // Here you will eventually trigger whisper_full()
+            paste_text("Test Recognition String (Toggle Mode)");
+            
             send_ui_command("hide");
+        }
+        pthread_mutex_unlock(&audio_mutex);
+        
+        return NULL; // Consume the event
     }
     
     return event;
