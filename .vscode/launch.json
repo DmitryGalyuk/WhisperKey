@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(lldb) Launch UI (Parent)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/WhisperKey",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build WhisperKey",
+            "MIMode": "lldb"
+        },
+        {
+            "name": "(lldb) Attach Engine (Child)",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/WhisperKey",
+            "processId": "${command:pickProcess}",
+            "MIMode": "lldb"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Debug: UI + Engine",
+            "configurations": ["(lldb) Launch UI (Parent)", "(lldb) Attach Engine (Child)"]
+        }
+    ]
+}
