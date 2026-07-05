@@ -1,9 +1,11 @@
-#include "hotkey.h"
 #include "logging.h"
 #include <ApplicationServices/ApplicationServices.h>
 
-#define HOTKEY_KEYCODE 176 // Mic keycode
+void hotkey_setup( void(*callback)() );
 
+#ifdef HOTKEY_IMPLEMENTATION
+
+#define HOTKEY_KEYCODE 176 // Mic keycode
 
 CFMachPortRef eventTap;
 void(*event_handler)();
@@ -72,3 +74,5 @@ void hotkey_setup( void(*callback)() ) {
     CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
     CGEventTapEnable(eventTap, true);
 }
+
+#endif // HOTKEY_IMPLEMENTATION

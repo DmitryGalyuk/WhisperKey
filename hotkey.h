@@ -1,1 +1,0 @@
-void hotkey_setup( void(*callback)() );
