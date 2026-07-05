@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
     "version": "0.2.0",
     "configurations": [
         {
@@ -27,6 +28,28 @@
         {
             "name": "Full Debug: UI + Engine",
             "configurations": ["(lldb) Launch UI (Parent)", "(lldb) Attach Engine (Child)"]
+=======
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:WhisperKey}",
+            "name": "Debug WhisperKey",
+            "target": "WhisperKey",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug WhisperKey"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:WhisperKey}",
+            "name": "Release WhisperKey",
+            "target": "WhisperKey",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release WhisperKey"
+>>>>>>> master
         }
     ]
 }
