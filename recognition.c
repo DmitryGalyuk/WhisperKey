@@ -8,7 +8,7 @@ struct whisper_context *ctx = NULL;
 
 void ensure_model_loaded() {
     if (ctx == NULL) {
-        ui_send_command("show_wait");
+        ui_waiting();
         LOG_INFO("Loading Whisper model into RAM...");
         
         struct whisper_context_params cparams = whisper_context_default_params();

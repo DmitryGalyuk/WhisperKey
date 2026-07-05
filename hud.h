@@ -1,2 +1,5 @@
 void ui_set_pipe(int fd);
-void ui_send_command(const char *cmd);
+
+void ui_recording();
+void ui_waiting();
+void ui_hide();

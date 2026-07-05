@@ -9,11 +9,6 @@ NSTextField *emojiLabel;
 int ipc_fd = -1;
 
 
-void ui_set_pipe(int fd) {
-    ipc_fd = fd;
-    LOG_DEBUG("IPC pipe set to FD: %d", ipc_fd);
-}
-
 void ui_send_command(const char *cmd) {
     if (ipc_fd != -1) {
         write(ipc_fd, cmd, strlen(cmd));
@@ -21,6 +16,25 @@ void ui_send_command(const char *cmd) {
         LOG_DEBUG("Sent IPC command: %s", cmd);
     }
 }
+
+void ui_set_pipe(int fd) {
+    ipc_fd = fd;
+    LOG_DEBUG("IPC pipe set to FD: %d", ipc_fd);
+}
+
+void ui_recording() {
+    ui_send_command("show_mic");
+}
+
+void ui_waiting() {
+    ui_send_command("show_wait");
+}
+
+void ui_hide() {
+    ui_send_command("hide");
+}
+
+
 
 
 void setup_window() {

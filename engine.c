@@ -13,9 +13,6 @@
 #include "hud.h"
 #include "hotkey.h"
 
-
-// extern void ui_send_command(const char *cmd);
-
 // --- Global State ---
 
 time_t last_used_timestamp = 0;
@@ -106,7 +103,7 @@ void hotkey_handler() {
             is_recording = 1;
             pthread_cond_signal(&audio_cond); // Signal audio thread to wake up
             
-            ui_send_command("show_mic");
+            ui_recording();
             last_used_timestamp = time(NULL);
         } else {
             // STOP RECORDING
@@ -115,12 +112,12 @@ void hotkey_handler() {
             is_recording = 0;
             pthread_cond_signal(&audio_cond); // Wake up to notice recording is 0
             
-            ui_send_command("show_wait");
+            ui_waiting();
             
             // Here you will eventually trigger whisper_full()
             paste_text("Test Recognition String (Toggle Mode)");
             
-            ui_send_command("hide");
+            ui_hide();
         }
         pthread_mutex_unlock(&audio_mutex);
 }
