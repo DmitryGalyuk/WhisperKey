@@ -3,7 +3,7 @@ CFLAGS_COMMON = -Wall -Wextra -I/opt/homebrew/include
 LDFLAGS = -L/opt/homebrew/lib -lwhisper -lggml -framework Cocoa -framework CoreAudio -framework Carbon -framework ApplicationServices
 
 TARGET = WhisperKey
-SRCS = main.c engine.c hud.m recognition.c
+SRCS = main.c engine.c hud.m recognition.c hotkey.c
 
 # По умолчанию собираем debug
 all: debug

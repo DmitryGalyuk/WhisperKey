@@ -11,8 +11,8 @@
 #include "logging.h"
 #include "recognition.h"
 #include "hud.h"
+#include "hotkey.h"
 
-#define HOTKEY_KEYCODE 176 // Mic keycode
 
 // extern void ui_send_command(const char *cmd);
 
@@ -24,32 +24,7 @@ pthread_mutex_t audio_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t audio_cond = PTHREAD_COND_INITIALIZER;
 int is_recording = 0;
 
-CFMachPortRef eventTap;
 
-
-
-// --- Security / Permissions ---
-void request_accessibility_permissions() {
-    LOG_INFO("Checking macOS Accessibility permissions...");
-    
-    const void *keys[] = { kAXTrustedCheckOptionPrompt };
-    const void *values[] = { kCFBooleanTrue };
-    
-    CFDictionaryRef options = CFDictionaryCreate(NULL, keys, values, 1, 
-                                                 &kCFCopyStringDictionaryKeyCallBacks, 
-                                                 &kCFTypeDictionaryValueCallBacks);
-    
-    bool is_trusted = AXIsProcessTrustedWithOptions(options);
-    CFRelease(options);
-    
-    if (!is_trusted) {
-        LOG_ERROR("Accessibility permissions missing! A system prompt should appear.");
-        LOG_ERROR("Please grant permissions to your Terminal in System Settings -> Privacy & Security -> Accessibility.");
-        LOG_ERROR("Then restart the application.");
-    } else {
-        LOG_INFO("Accessibility permissions are granted. Global hotkeys will work.");
-    }
-}
 
 // --- Utilities ---
 
@@ -120,25 +95,8 @@ void *audio_thread(void *arg) {
     return NULL;
 }
 
-
-
-// Callback, который будет вызываться при каждом нажатии клавиш
-CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *userInfo) {
-    (void)proxy;
-    (void)userInfo;
-
-    if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
-        CGEventTapEnable(eventTap, true);
-        return event;
-    }
-
-    CGKeyCode keycode = (CGKeyCode)CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
-
-    // Filter only for our key (176) and only for KeyDown (to avoid double triggers on repeat)
-    if (keycode == HOTKEY_KEYCODE && type == kCGEventKeyDown) {
-        if (CGEventGetIntegerValueField(event, kCGKeyboardEventAutorepeat)) return NULL;
-
-        // --- TOGGLE LOGIC ---
+void hotkey_handler() {
+    // --- TOGGLE LOGIC ---
         pthread_mutex_lock(&audio_mutex);
         if (!is_recording) {
             // START RECORDING
@@ -165,28 +123,8 @@ CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef e
             ui_send_command("hide");
         }
         pthread_mutex_unlock(&audio_mutex);
-        
-        return NULL; // Consume the event
-    }
-    
-    return event;
 }
 
-// В функции run_engine вместо Carbon:
-void setup_hotkey_tap() {
-    CGEventMask eventMask = (1 << kCGEventKeyDown);
-    eventTap = CGEventTapCreate(
-        kCGSessionEventTap, kCGHeadInsertEventTap, 0, eventMask, hotkey_callback, NULL);
-
-    if (!eventTap) {
-        fprintf(stderr, "ERROR: Accessibility permissions required.\n");
-        request_accessibility_permissions();
-    }
-
-    CFRunLoopSourceRef runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0);
-    CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
-    CGEventTapEnable(eventTap, true);
-}
 
 int run_engine(int pipe_write_fd) {
     ui_set_pipe(pipe_write_fd);
@@ -201,7 +139,7 @@ int run_engine(int pipe_write_fd) {
     pthread_create(&wd_tid, NULL, watchdog_thread, NULL);
     pthread_create(&audio_tid, NULL, audio_thread, NULL);
     
-    setup_hotkey_tap();
+    hotkey_setup(&hotkey_handler);
     
     LOG_INFO("Entering CoreFoundation RunLoop...");
     CFRunLoopRun();
