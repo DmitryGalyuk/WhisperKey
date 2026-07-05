@@ -2,11 +2,11 @@ CC = clang
 CFLAGS_COMMON = -Wall -Wextra -I/opt/homebrew/include
 LDFLAGS = -L/opt/homebrew/lib -lwhisper -lggml -framework Cocoa -framework CoreAudio -framework Carbon -framework ApplicationServices
 
-TARGET = WhisperKey
-SRCS = main.c engine.c hud.m recognition.c hotkey.c
+TARGET = bin/WhisperKey
+SRCS = *.c *.m
 
 # По умолчанию собираем debug
-all: debug
+all: clean debug
 
 debug: CFLAGS = $(CFLAGS_COMMON) -O0 -g -DDEBUG
 debug:
@@ -20,5 +20,4 @@ release:
 	@echo "[RELEASE] Сборка завершена: ./$(TARGET)"
 
 clean:
-	rm -f $(TARGET)
-	rm -rf *.dSYM
+	rm -rf bin/*
