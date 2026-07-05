@@ -80,7 +80,7 @@ void start_pipe_listener(int fd) {
                 [overlayWindow orderFront:nil];
             } 
             else if ([command containsString:@"show_wait"]) {
-                [emojiLabel setStringValue:@"⏳"];
+                [emojiLabel setStringValue:@"📝"];
                 [overlayWindow orderFront:nil];
             } 
             else if ([command containsString:@"hide"]) {

@@ -49,9 +49,9 @@ CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef e
         if (CGEventGetIntegerValueField(event, kCGKeyboardEventAutorepeat)) return NULL;
 
         event_handler(); // Call the provided callback function
+        return NULL;
     }
     
-    // return NULL // what is right???
     return event;
 }
 
