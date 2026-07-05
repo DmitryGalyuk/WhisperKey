@@ -7,16 +7,17 @@
 #include <Carbon/Carbon.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <CoreFoundation/CoreFoundation.h>
-#include "whisper.h"
 #include <signal.h>
 #include "logging.h"
-
+#include "recognition.h"
+#include "hud.h"
 
 #define HOTKEY_KEYCODE 176 // Mic keycode
 
+// extern void ui_send_command(const char *cmd);
+
 // --- Global State ---
-int ipc_fd = -1;
-struct whisper_context *ctx = NULL;
+
 time_t last_used_timestamp = 0;
 
 pthread_mutex_t audio_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -51,13 +52,6 @@ void request_accessibility_permissions() {
 }
 
 // --- Utilities ---
-void send_ui_command(const char *cmd) {
-    if (ipc_fd != -1) {
-        write(ipc_fd, cmd, strlen(cmd));
-        write(ipc_fd, "\n", 1);
-        LOG_DEBUG("Sent IPC command: %s", cmd);
-    }
-}
 
 void paste_text(const char *text) {
     if (!text || strlen(text) == 0) return;
@@ -82,38 +76,7 @@ void paste_text(const char *text) {
     CFRelease(source);
 }
 
-// --- Whisper Core ---
-void ensure_model_loaded() {
-    if (ctx == NULL) {
-        send_ui_command("show_wait");
-        LOG_INFO("Loading Whisper model into RAM...");
-        
-        struct whisper_context_params cparams = whisper_context_default_params();
 
-        cparams.use_gpu = false;
-        cparams.flash_attn = false;
-        cparams.gpu_device = -1;
-        cparams.dtw_token_timestamps = false;
-        cparams.dtw_aheads_preset = WHISPER_AHEADS_NONE;
-        cparams.dtw_n_top = 0;
-        cparams.dtw_aheads = (whisper_aheads){.n_heads = 0, .heads = NULL};
-        cparams.dtw_mem_size = 0;
-
-        char* ggmlBackendDir = "/opt/homebrew/opt/ggml/libexec";
-        setenv("GGML_BACKEND_PATH", ggmlBackendDir, 1);
-        ggml_backend_load_all_from_path(ggmlBackendDir);
-        LOG_INFO("[WhisperEngine] loaded ggml dynamic backends from %s", ggmlBackendDir);
-        
-        // IMPORTANT: Ensure this path is correct for your system!
-        ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-small.bin", cparams);
-        
-        if (!ctx) {
-            LOG_ERROR("Failed to load Whisper model. File missing or invalid path.");
-            exit(1);
-        }
-        LOG_INFO("Whisper model loaded successfully.");
-    }
-}
 
 // --- Threads ---
 void *watchdog_thread(void *arg) {
@@ -133,10 +96,8 @@ void *watchdog_thread(void *arg) {
         
         // Старая логика проверки таймаута модели
         time_t now = time(NULL);
-        if (ctx != NULL && (now - last_used_timestamp > 600)) {
-            LOG_INFO("Idle for 10 minutes. Unloading model...");
-            whisper_free(ctx);
-            ctx = NULL;
+        if (now - last_used_timestamp > 600) {
+            unload_model();
         }
     }
     return NULL;
@@ -187,7 +148,7 @@ CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef e
             is_recording = 1;
             pthread_cond_signal(&audio_cond); // Signal audio thread to wake up
             
-            send_ui_command("show_mic");
+            ui_send_command("show_mic");
             last_used_timestamp = time(NULL);
         } else {
             // STOP RECORDING
@@ -196,12 +157,12 @@ CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef e
             is_recording = 0;
             pthread_cond_signal(&audio_cond); // Wake up to notice recording is 0
             
-            send_ui_command("show_wait");
+            ui_send_command("show_wait");
             
             // Here you will eventually trigger whisper_full()
             paste_text("Test Recognition String (Toggle Mode)");
             
-            send_ui_command("hide");
+            ui_send_command("hide");
         }
         pthread_mutex_unlock(&audio_mutex);
         
@@ -228,7 +189,7 @@ void setup_hotkey_tap() {
 }
 
 int run_engine(int pipe_write_fd) {
-    ipc_fd = pipe_write_fd;
+    ui_set_pipe(pipe_write_fd);
     last_used_timestamp = time(NULL);
     
     LOG_INFO("Engine process started. PID: %d", getpid());

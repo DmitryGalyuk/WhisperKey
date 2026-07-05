@@ -1,8 +1,27 @@
 #import <Cocoa/Cocoa.h>
 #include <unistd.h>
+#include "hud.h"
+#include "logging.h"
 
 NSWindow *overlayWindow;
 NSTextField *emojiLabel;
+
+int ipc_fd = -1;
+
+
+void ui_set_pipe(int fd) {
+    ipc_fd = fd;
+    LOG_DEBUG("IPC pipe set to FD: %d", ipc_fd);
+}
+
+void ui_send_command(const char *cmd) {
+    if (ipc_fd != -1) {
+        write(ipc_fd, cmd, strlen(cmd));
+        write(ipc_fd, "\n", 1);
+        LOG_DEBUG("Sent IPC command: %s", cmd);
+    }
+}
+
 
 void setup_window() {
     NSLog(@"[HUD] Initializing transparent overlay window...");
