@@ -2,11 +2,14 @@
 #include <unistd.h>
 #include "hud.h"
 #include "logging.h"
+#import <AVFoundation/AVFoundation.h>
 
 NSWindow *overlayWindow;
 NSTextField *emojiLabel;
 
 int ipc_fd = -1;
+
+
 
 
 void ui_send_command(const char *cmd) {
@@ -106,9 +109,40 @@ void start_pipe_listener(int fd) {
     dispatch_resume(source);
 }
 
+
+void check_mic_permission() {
+    LOG_INFO("[MAIN] Checking Microphone permissions...");
+    if (@available(macOS 10.14, *)) {
+        AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+        
+        if (status == AVAuthorizationStatusAuthorized) {
+            LOG_INFO("[MAIN] Microphone permission: GRANTED");
+        } 
+        else if (status == AVAuthorizationStatusNotDetermined) {
+            LOG_INFO("[MAIN] Microphone permission: REQUESTING...");
+            dispatch_semaphore_t sema = dispatch_semaphore_create(0);
+            
+            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
+                if (granted) {
+                    LOG_INFO("[MAIN] Microphone permission: GRANTED by user");
+                } else {
+                    LOG_ERROR("[MAIN ERROR] Microphone permission: DENIED by user");
+                }
+                dispatch_semaphore_signal(sema);
+            }];
+            
+            // Ждем, пока пользователь не нажмет кнопку в системном окне
+            dispatch_semaphore_wait(sema, DISPATCH_TIME_FOREVER);
+        } 
+        else {
+            LOG_ERROR("[MAIN ERROR] Microphone permission: DENIED. You must enable it in System Settings -> Privacy & Security -> Microphone");
+        }
+    }
+}
+
 int run_hud(int pipe_read_fd) {
     @autoreleasepool {
-        NSLog(@"[HUD] Process started. PID: %d", getpid());
+        LOG_INFO("[HUD] Process started. PID: %d", getpid());
         
         NSApplication *app = [NSApplication sharedApplication];
         [app setActivationPolicy:NSApplicationActivationPolicyAccessory]; // Hide from Dock
@@ -116,7 +150,7 @@ int run_hud(int pipe_read_fd) {
         setup_window();
         start_pipe_listener(pipe_read_fd);
         
-        NSLog(@"[HUD] Entering main UI runloop...");
+        LOG_INFO("[HUD] Entering main UI runloop...");
         [app run];
     }
     return 0;
