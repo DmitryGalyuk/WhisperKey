@@ -9,9 +9,9 @@
 #ifndef RECOGNITION_INCLUDED
 #define RECOGNITION_INCLUDED
 
-void ensure_model_loaded();
-void unload_model();
-size_t recognize_audio(AudioState audio_state, char *text_buffer, size_t buffer_size);
+void recognize_ensure_model_loaded();
+void recognize_unload_model();
+size_t recognize_audio(AudioState *audio_state, char *text_buffer, size_t buffer_size);
 
 #endif // RECOGNITION_INCLUDED
 
@@ -20,7 +20,7 @@ size_t recognize_audio(AudioState audio_state, char *text_buffer, size_t buffer_
 
 struct whisper_context *ctx = NULL;
 
-void ensure_model_loaded() {
+void recognize_ensure_model_loaded() {
     if (ctx == NULL) {
         ui_waiting();
         LOG_INFO("Loading Whisper model into RAM...");
@@ -52,7 +52,7 @@ void ensure_model_loaded() {
     }
 }
 
-void unload_model() {
+void recognize_unload_model() {
     if (ctx != NULL) {
         LOG_INFO("Unloading Whisper model from RAM...");
         whisper_free(ctx);
@@ -62,14 +62,14 @@ void unload_model() {
 
 // returns the number of characters written to text_buffer (excluding null terminator)
 // -1 in case of error 
-size_t recognize_audio(AudioState audio_state, char *text_buffer, size_t buffer_size) {
+size_t recognize_audio(AudioState *audio_state, char *text_buffer, size_t buffer_size) {
     struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     wparams.language = "auto"; // Or "ru" to force Russian
     wparams.print_progress = false;
     wparams.print_timestamps = false;
     
     // Run neural network
-    if (whisper_full(ctx, wparams, audio_state.samples, audio_state.sample_count) != 0) {
+    if (whisper_full(ctx, wparams, audio_state->samples, audio_state->sample_count) != 0) {
         LOG_ERROR("Failed to process audio with Whisper");
         return -1;
     }
@@ -90,8 +90,8 @@ size_t recognize_audio(AudioState audio_state, char *text_buffer, size_t buffer_
         // Trim leading spaces safely
         while (*text == ' ') text++;
         
-        strncat(text_buffer, text, sizeof(text_buffer) - strlen(text_buffer) - 1);
-        strncat(text_buffer, " ", sizeof(text_buffer) - strlen(text_buffer) - 1);
+        strncat(text_buffer, text, buffer_size - strlen(text_buffer) - 1);
+        strncat(text_buffer, " ", buffer_size - strlen(text_buffer) - 1);
     }
 
     // Remove trailing space

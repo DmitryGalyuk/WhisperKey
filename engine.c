@@ -51,7 +51,7 @@ void *watchdog_thread(void *arg) {
         // Старая логика проверки таймаута модели
         time_t now = time(NULL);
         if (now - last_used_timestamp > 600) {
-            unload_model();
+            recognize_unload_model();
         }
     }
     return NULL;
@@ -65,7 +65,7 @@ void hotkey_handler() {
         if (!audio_state.is_recording) {
             // START RECORDING
             LOG_INFO(">>> TOGGLE: START RECORDING <<<");
-            ensure_model_loaded();
+            recognize_ensure_model_loaded();
             
             audio_state.is_recording = 1;
             
@@ -79,7 +79,7 @@ void hotkey_handler() {
             
             ui_waiting();
 
-            recognize_audio(audio_state, text_buffer, sizeof(text_buffer));
+            recognize_audio(&audio_state, text_buffer, sizeof(text_buffer));
             
             // Here you will eventually trigger whisper_full()
             paste_text(text_buffer);
@@ -93,6 +93,7 @@ int run_engine(int pipe_write_fd) {
     ui_set_pipe(pipe_write_fd);
     last_used_timestamp = time(NULL);
     
+    
     LOG_INFO("Engine process started. PID: %d", getpid());
     
     // Check and prompt for permissions FIRST
@@ -100,6 +101,8 @@ int run_engine(int pipe_write_fd) {
     
     
     hotkey_setup(&hotkey_handler);
+
+    recognize_ensure_model_loaded();
     
     LOG_INFO("Entering CoreFoundation RunLoop...");
     CFRunLoopRun();
