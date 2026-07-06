@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "whisper.h"
-#include "audio.c"
+#include "audio.h"
 #include "logging.h"
 #include "hud.h"
 
@@ -42,7 +42,8 @@ void recognize_ensure_model_loaded() {
         LOG_INFO("[WhisperEngine] loaded ggml dynamic backends from %s", ggmlBackendDir);
         
         // IMPORTANT: Ensure this path is correct for your system!
-        ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-small.bin", cparams);
+        // ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-small.bin", cparams);
+        ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-base.bin", cparams);
         
         if (!ctx) {
             LOG_ERROR("Failed to load Whisper model. File missing or invalid path.");
@@ -64,7 +65,8 @@ void recognize_unload_model() {
 // -1 in case of error 
 size_t recognize_audio(AudioState *audio_state, char *text_buffer, size_t buffer_size) {
     struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
-    wparams.language = "auto"; // Or "ru" to force Russian
+    wparams.language = "ru"; // Or "ru" to force Russian
+    wparams.n_threads = 4;
     wparams.print_progress = false;
     wparams.print_timestamps = false;
     wparams.no_context = true;

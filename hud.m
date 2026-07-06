@@ -1,6 +1,5 @@
 #import <Cocoa/Cocoa.h>
 #include <unistd.h>
-#include "hud.h"
 #include "logging.h"
 #import <AVFoundation/AVFoundation.h>
 

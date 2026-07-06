@@ -4,7 +4,8 @@
 #ifndef HOTKEY_INCLUDED
 #define HOTKEY_INCLUDED
 
-void hotkey_setup( void(*callback)() );
+void keyboard_hotkey_setup( void(*callback)() );
+void keyboard_paste(const char *text);
 
 #endif // HOTKEY_INCLUDED
 
@@ -63,7 +64,7 @@ CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef e
 }
 
 // В функции run_engine вместо Carbon:
-void hotkey_setup( void(*callback)() ) {
+void keyboard_hotkey_setup( void(*callback)() ) {
     event_handler = callback;
 
     CGEventMask eventMask = (1 << kCGEventKeyDown);
@@ -78,6 +79,44 @@ void hotkey_setup( void(*callback)() ) {
     CFRunLoopSourceRef runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0);
     CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, kCFRunLoopCommonModes);
     CGEventTapEnable(eventTap, true);
+}
+
+void keyboard_paste(const char *text) {
+    if (!text || strlen(text) == 0) return;
+    
+    LOG_INFO("Pasting text to active window: %s", text);
+    
+    char cmd[4096];
+    snprintf(cmd, sizeof(cmd), "printf '%%s' '%s' | pbcopy", text);
+    system(cmd);
+
+    // Emulate Cmd+V
+    CGEventSourceRef source = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
+    CGEventRef vDown = CGEventCreateKeyboardEvent(source, (CGKeyCode)9, true);
+    CGEventSetFlags(vDown, kCGEventFlagMaskCommand);
+    CGEventRef vUp = CGEventCreateKeyboardEvent(source, (CGKeyCode)9, false);
+    
+    CGEventPost(kCGHIDEventTap, vDown);
+    CGEventPost(kCGHIDEventTap, vUp);
+    
+    CFRelease(vDown);
+    CFRelease(vUp);
+    CFRelease(source);
+}
+
+
+void get_system_language(char *lang_buf, size_t buf_size) {
+    // Дефолтное значение на случай, если что-то пойдет не так
+    strncpy(lang_buf, "en", buf_size);
+
+    CFLocaleRef current_locale = CFLocaleCopyCurrent();
+    if (current_locale) {
+        CFStringRef lang_code = CFLocaleGetValue(current_locale, kCFLocaleLanguageCode);
+        if (lang_code) {
+            CFStringGetCString(lang_code, lang_buf, buf_size, kCFStringEncodingUTF8);
+        }
+        CFRelease(current_locale);
+    }
 }
 
 #endif // HOTKEY_IMPLEMENTATION

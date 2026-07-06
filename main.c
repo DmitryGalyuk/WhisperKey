@@ -10,20 +10,18 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <signal.h>
 
-#include "logging.h"
 #include "hud.h"
 
+#include "logging.h"
+
 #define RECOGNITION_IMPLEMENTATION
-#include "recognition.c"
+#include "recognition.h"
 
 #define HOTKEY_IMPLEMENTATION
-#include "hotkey.c"
-
-#define PASTE_IMPLEMENTATION
-#include "paste.c"
+#include "hotkey.h"
 
 #define AUDIO_IMPLEMENTATION
-#include "audio.c"
+#include "audio.h"
 
 time_t last_used_timestamp = 0;
 
@@ -86,7 +84,7 @@ void hotkey_handler() {
             recognize_audio(&audio_state, text_buffer, sizeof(text_buffer));
             
             // Here you will eventually trigger whisper_full()
-            paste_text(text_buffer);
+            keyboard_paste(text_buffer);
             
             ui_hide();
         }
@@ -104,7 +102,7 @@ int run_engine(int pipe_write_fd) {
     // request_accessibility_permissions();
     
     
-    hotkey_setup(&hotkey_handler);
+    keyboard_hotkey_setup(&hotkey_handler);
 
     recognize_ensure_model_loaded();
     
@@ -175,3 +173,4 @@ int main(int argc, char **argv) {
     
     return run_hud(pipefd[0]);
 }
+
