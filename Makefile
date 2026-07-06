@@ -1,6 +1,6 @@
 CC = clang
 CFLAGS_COMMON = -Wall -Wextra -I/opt/homebrew/include
-LDFLAGS = -L/opt/homebrew/lib -lwhisper -lggml -framework Cocoa -framework CoreAudio -framework Carbon -framework ApplicationServices
+LDFLAGS = -L/opt/homebrew/lib -lwhisper -lggml -framework Cocoa -framework CoreAudio -framework Carbon -framework ApplicationServices -framework AudioToolbox
 
 TARGET = bin/WhisperKey
 SRCS = *.c *.m

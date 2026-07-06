@@ -1,6 +1,8 @@
 #include <stdlib.h>
+
 #include "recognition.h"
 #include "whisper.h"
+#include "audio.c"
 #include "logging.h"
 #include "hud.h"
 
@@ -44,4 +46,46 @@ void unload_model() {
         whisper_free(ctx);
         ctx = NULL;
     }
+}
+
+// returns the number of characters written to text_buffer (excluding null terminator)
+// -1 in case of error 
+size_t recognize_audio(AudioState audio_state, char *text_buffer, size_t buffer_size) {
+    struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+    wparams.language = "auto"; // Or "ru" to force Russian
+    wparams.print_progress = false;
+    wparams.print_timestamps = false;
+    
+    // Run neural network
+    if (whisper_full(ctx, wparams, audio_state.samples, audio_state.sample_count) != 0) {
+        LOG_ERROR("Failed to process audio with Whisper");
+        return -1;
+    }
+
+    int n_segments = whisper_full_n_segments(ctx);
+    if (n_segments == 0) {
+        LOG_INFO("No speech recognized.");
+        return -1;
+    }
+
+    // Allocate buffer for final text
+    for (int i = 0; i < n_segments; ++i) {
+        const char *text = whisper_full_get_segment_text(ctx, i);
+        
+        // Skip Whisper hallucinations (often enclosed in brackets)
+        if (text[0] == '[' || text[0] == '(') continue; 
+        
+        // Trim leading spaces safely
+        while (*text == ' ') text++;
+        
+        strncat(text_buffer, text, sizeof(text_buffer) - strlen(text_buffer) - 1);
+        strncat(text_buffer, " ", sizeof(text_buffer) - strlen(text_buffer) - 1);
+    }
+
+    // Remove trailing space
+    if (strlen(text_buffer) > 0) {
+        text_buffer[strlen(text_buffer) - 1] = '\0';
+    }
+
+    return strlen(text_buffer);
 }

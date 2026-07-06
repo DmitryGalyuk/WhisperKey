@@ -9,11 +9,11 @@ extern int run_engine(int pipe_write_fd);
 extern int run_hud(int pipe_read_fd);
 
 int main(int argc, char **argv) {
-    // 1. Child process mode (Engine)
-    if (argc == 3 && strcmp(argv[1], "--engine") == 0) {
-        int pipe_fd = atoi(argv[2]);
-        return run_engine(pipe_fd);
-    }
+    // // 1. Child process mode (Engine)
+    // if (argc == 3 && strcmp(argv[1], "--engine") == 0) {
+    //     int pipe_fd = atoi(argv[2]);
+    //     return run_engine(pipe_fd);
+    // }
 
     // 2. Parent process mode (UI / Router)
     printf("[MAIN] Starting WhisperKey Router...\n");
@@ -46,15 +46,17 @@ int main(int argc, char **argv) {
         // CHILD PROCESS
         close(pipefd[0]); // Close read end
         
-        char fd_str[16];
-        snprintf(fd_str, sizeof(fd_str), "%d", pipefd[1]);
+        // char fd_str[16];
+        // snprintf(fd_str, sizeof(fd_str), "%d", pipefd[1]);
         
-        // Execute self as engine
-        LOG_INFO("Executing engine process: %s --engine %s", path, fd_str);
-        execl(path, "WhisperKey", "--engine", fd_str, NULL);
+        // // Execute self as engine
+        // LOG_INFO("Executing engine process: %s --engine %s", path, fd_str);
+        // execl(path, "WhisperKey", "--engine", fd_str, NULL);
         
-        // If execl fails:
-        perror("[MAIN ERROR] execl failed");
+        run_engine(pipefd[1]);
+
+        // // If execl fails:
+        // perror("[MAIN ERROR] execl failed");
         return 1;
     }
 

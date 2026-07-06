@@ -8,6 +8,7 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <signal.h>
+
 #include "logging.h"
 #include "recognition.h"
 #include "hud.h"
@@ -18,20 +19,14 @@
 #define PASTE_IMPLEMENTATION
 #include "paste.c"
 
+#define AUDIO_IMPLEMENTATION
+#include "audio.c"
+
 // --- Global State ---
 
 time_t last_used_timestamp = 0;
 
-pthread_mutex_t audio_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t audio_cond = PTHREAD_COND_INITIALIZER;
-int is_recording = 0;
-
-
-
-// --- Utilities ---
-
-
-
+AudioState audio_state;
 
 // --- Threads ---
 void *watchdog_thread(void *arg) {
@@ -58,33 +53,17 @@ void *watchdog_thread(void *arg) {
     return NULL;
 }
 
-void *audio_thread(void *arg) {
-    (void)arg;
-    LOG_DEBUG("Audio capture thread started (Sleeping).");
-    
-    while (1) {
-        pthread_mutex_lock(&audio_mutex);
-        while (!is_recording) {
-            pthread_cond_wait(&audio_cond, &audio_mutex);
-        }
-        pthread_mutex_unlock(&audio_mutex);
-        
-        // Dummy loop simulating audio capture
-        usleep(100000); 
-    }
-    return NULL;
-}
+
+
 
 void hotkey_handler() {
     // --- TOGGLE LOGIC ---
-        pthread_mutex_lock(&audio_mutex);
-        if (!is_recording) {
+        if (!audio_state.is_recording) {
             // START RECORDING
             LOG_INFO(">>> TOGGLE: START RECORDING <<<");
             ensure_model_loaded();
             
-            is_recording = 1;
-            pthread_cond_signal(&audio_cond); // Signal audio thread to wake up
+            audio_state.is_recording = 1;
             
             ui_recording();
             last_used_timestamp = time(NULL);
@@ -92,8 +71,7 @@ void hotkey_handler() {
             // STOP RECORDING
             LOG_INFO(">>> TOGGLE: STOP RECORDING & PROCESS <<<");
             
-            is_recording = 0;
-            pthread_cond_signal(&audio_cond); // Wake up to notice recording is 0
+            audio_state.is_recording = 0;
             
             ui_waiting();
             
@@ -102,7 +80,6 @@ void hotkey_handler() {
             
             ui_hide();
         }
-        pthread_mutex_unlock(&audio_mutex);
 }
 
 
@@ -115,9 +92,6 @@ int run_engine(int pipe_write_fd) {
     // Check and prompt for permissions FIRST
     // request_accessibility_permissions();
     
-    pthread_t wd_tid, audio_tid;
-    pthread_create(&wd_tid, NULL, watchdog_thread, NULL);
-    pthread_create(&audio_tid, NULL, audio_thread, NULL);
     
     hotkey_setup(&hotkey_handler);
     
