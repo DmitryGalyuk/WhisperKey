@@ -67,6 +67,7 @@ size_t recognize_audio(AudioState *audio_state, char *text_buffer, size_t buffer
     wparams.language = "auto"; // Or "ru" to force Russian
     wparams.print_progress = false;
     wparams.print_timestamps = false;
+    wparams.no_context = true;
     
     // Run neural network
     if (whisper_full(ctx, wparams, audio_state->samples, audio_state->sample_count) != 0) {

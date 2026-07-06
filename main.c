@@ -81,6 +81,8 @@ void hotkey_handler() {
 
             ui_waiting();
 
+            text_buffer[0] = '\0'; // Clear the buffer before recognition
+
             recognize_audio(&audio_state, text_buffer, sizeof(text_buffer));
             
             // Here you will eventually trigger whisper_full()
