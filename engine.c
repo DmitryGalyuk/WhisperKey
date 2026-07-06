@@ -10,8 +10,10 @@
 #include <signal.h>
 
 #include "logging.h"
-#include "recognition.h"
 #include "hud.h"
+
+#define RECOGNITION_IMPLEMENTATION
+#include "recognition.c"
 
 #define HOTKEY_IMPLEMENTATION
 #include "hotkey.c"
@@ -27,6 +29,8 @@
 time_t last_used_timestamp = 0;
 
 AudioState audio_state;
+
+char text_buffer[4096]; // Buffer to hold recognized text
 
 // --- Threads ---
 void *watchdog_thread(void *arg) {
@@ -74,9 +78,11 @@ void hotkey_handler() {
             audio_state.is_recording = 0;
             
             ui_waiting();
+
+            recognize_audio(audio_state, text_buffer, sizeof(text_buffer));
             
             // Here you will eventually trigger whisper_full()
-            paste_text("Test Recognition String (Toggle Mode)");
+            paste_text(text_buffer);
             
             ui_hide();
         }

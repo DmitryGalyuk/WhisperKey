@@ -3,12 +3,15 @@
 
 #include "logging.h"
 
+#ifndef AUDIO_INCLUDED
+#define AUDIO_INCLUDED
+
 #define SAMPLE_RATE 16000
 #define MAX_AUDIO_SEC 60
 #define MAX_AUDIO_SAMPLES (SAMPLE_RATE * MAX_AUDIO_SEC)
 
 // --- Audio State ---
-typedef struct {
+typedef struct AudioState {
     float samples[MAX_AUDIO_SAMPLES];
     size_t sample_count;
     AudioQueueRef queue;
@@ -16,6 +19,8 @@ typedef struct {
     bool is_recording;
 } AudioState;
 
+
+#endif // AUDIO_INCLUDED
 // #define AUDIO_IMPLEMENTATION
 #ifdef AUDIO_IMPLEMENTATION
 

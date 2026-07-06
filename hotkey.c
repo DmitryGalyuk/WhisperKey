@@ -1,7 +1,12 @@
 #include "logging.h"
 #include <ApplicationServices/ApplicationServices.h>
 
+#ifndef HOTKEY_INCLUDED
+#define HOTKEY_INCLUDED
+
 void hotkey_setup( void(*callback)() );
+
+#endif // HOTKEY_INCLUDED
 
 #ifdef HOTKEY_IMPLEMENTATION
 

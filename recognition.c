@@ -1,10 +1,22 @@
 #include <stdlib.h>
 
-#include "recognition.h"
 #include "whisper.h"
 #include "audio.c"
 #include "logging.h"
 #include "hud.h"
+
+
+#ifndef RECOGNITION_INCLUDED
+#define RECOGNITION_INCLUDED
+
+void ensure_model_loaded();
+void unload_model();
+size_t recognize_audio(AudioState audio_state, char *text_buffer, size_t buffer_size);
+
+#endif // RECOGNITION_INCLUDED
+
+
+#ifdef RECOGNITION_IMPLEMENTATION
 
 struct whisper_context *ctx = NULL;
 
@@ -89,3 +101,5 @@ size_t recognize_audio(AudioState audio_state, char *text_buffer, size_t buffer_
 
     return strlen(text_buffer);
 }
+
+#endif // RECOGNITION_IMPLEMENTATION
