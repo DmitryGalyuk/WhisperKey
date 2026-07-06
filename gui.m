@@ -1,7 +1,9 @@
 #import <Cocoa/Cocoa.h>
 #include <unistd.h>
-#include "logging.h"
 #import <AVFoundation/AVFoundation.h>
+
+#include "gui.h"
+#include "logging.h"
 
 NSWindow *overlayWindow;
 NSTextField *emojiLabel;
@@ -11,7 +13,7 @@ int ipc_fd = -1;
 
 
 
-void ui_send_command(const char *cmd) {
+void gui_send_command(const char *cmd) {
     if (ipc_fd != -1) {
         write(ipc_fd, cmd, strlen(cmd));
         write(ipc_fd, "\n", 1);
@@ -19,21 +21,21 @@ void ui_send_command(const char *cmd) {
     }
 }
 
-void ui_set_pipe(int fd) {
+void gui_set_pipe(int fd) {
     ipc_fd = fd;
     LOG_DEBUG("IPC pipe set to FD: %d", ipc_fd);
 }
 
-void ui_recording() {
-    ui_send_command("show_mic");
+void gui_recording() {
+    gui_send_command("show_mic");
 }
 
-void ui_waiting() {
-    ui_send_command("show_wait");
+void gui_waiting() {
+    gui_send_command("show_wait");
 }
 
-void ui_hide() {
-    ui_send_command("hide");
+void gui_hide() {
+    gui_send_command("hide");
 }
 
 

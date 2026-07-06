@@ -10,7 +10,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <signal.h>
 
-#include "hud.h"
+#include "gui.h"
 
 #include "logging.h"
 
@@ -18,7 +18,7 @@
 #include "recognition.h"
 
 #define HOTKEY_IMPLEMENTATION
-#include "hotkey.h"
+#include "keyboard.h"
 
 #define AUDIO_IMPLEMENTATION
 #include "audio.h"
@@ -69,7 +69,7 @@ void hotkey_handler() {
             audio_state.is_recording = 1;
             audio_start_recording(&audio_state);
             
-            ui_recording();
+            gui_recording();
             last_used_timestamp = time(NULL);
         } else {
             // STOP RECORDING
@@ -77,7 +77,7 @@ void hotkey_handler() {
             
             audio_stop_recording(&audio_state);
 
-            ui_waiting();
+            gui_waiting();
 
             text_buffer[0] = '\0'; // Clear the buffer before recognition
 
@@ -86,13 +86,13 @@ void hotkey_handler() {
             // Here you will eventually trigger whisper_full()
             keyboard_paste(text_buffer);
             
-            ui_hide();
+            gui_hide();
         }
 }
 
 
 int run_engine(int pipe_write_fd) {
-    ui_set_pipe(pipe_write_fd);
+    gui_set_pipe(pipe_write_fd);
     last_used_timestamp = time(NULL);
     
     

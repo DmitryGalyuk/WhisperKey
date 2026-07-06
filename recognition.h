@@ -3,7 +3,7 @@
 #include "whisper.h"
 #include "audio.h"
 #include "logging.h"
-#include "hud.h"
+#include "gui.h"
 
 
 #ifndef RECOGNITION_INCLUDED
@@ -22,7 +22,7 @@ struct whisper_context *ctx = NULL;
 
 void recognize_ensure_model_loaded() {
     if (ctx == NULL) {
-        ui_waiting();
+        gui_waiting();
         LOG_INFO("Loading Whisper model into RAM...");
         
         struct whisper_context_params cparams = whisper_context_default_params();
