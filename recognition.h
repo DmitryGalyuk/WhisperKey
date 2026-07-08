@@ -11,7 +11,7 @@
 
 void recognize_ensure_model_loaded();
 void recognize_unload_model();
-size_t recognize_audio(AudioState *audio_state, char *text_buffer, size_t buffer_size);
+size_t recognize_process_buffer(const float *samples, size_t sample_count, const char *lang, char *out_text, size_t max_len);
 
 #endif // RECOGNITION_INCLUDED
 
@@ -27,9 +27,9 @@ void recognize_ensure_model_loaded() {
         
         struct whisper_context_params cparams = whisper_context_default_params();
 
-        cparams.use_gpu = false;
+        // cparams.use_gpu = false;
         cparams.flash_attn = false;
-        cparams.gpu_device = -1;
+        // cparams.gpu_device = -1;
         cparams.dtw_token_timestamps = false;
         cparams.dtw_aheads_preset = WHISPER_AHEADS_NONE;
         cparams.dtw_n_top = 0;
@@ -43,7 +43,8 @@ void recognize_ensure_model_loaded() {
         
         // IMPORTANT: Ensure this path is correct for your system!
         // ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-small.bin", cparams);
-        ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-base.bin", cparams);
+        // ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-base.bin", cparams);
+        ctx = whisper_init_from_file_with_params("/opt/homebrew/share/whisper-cpp/models/ggml-medium.bin", cparams);
         
         if (!ctx) {
             LOG_ERROR("Failed to load Whisper model. File missing or invalid path.");
@@ -63,16 +64,17 @@ void recognize_unload_model() {
 
 // returns the number of characters written to text_buffer (excluding null terminator)
 // -1 in case of error 
-size_t recognize_audio(AudioState *audio_state, char *text_buffer, size_t buffer_size) {
+size_t recognize_process_buffer(const float *samples, size_t sample_count, const char *lang, char *out_text, size_t max_len) {
     struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     wparams.language = "ru"; // Or "ru" to force Russian
     wparams.n_threads = 4;
     wparams.print_progress = false;
     wparams.print_timestamps = false;
-    wparams.no_context = true;
+    // wparams.no_context = true;
+    wparams.no_context = false;
     
     // Run neural network
-    if (whisper_full(ctx, wparams, audio_state->samples, audio_state->sample_count) != 0) {
+    if (whisper_full(ctx, wparams, samples, sample_count) != 0) {
         LOG_ERROR("Failed to process audio with Whisper");
         return -1;
     }
@@ -93,16 +95,16 @@ size_t recognize_audio(AudioState *audio_state, char *text_buffer, size_t buffer
         // Trim leading spaces safely
         while (*text == ' ') text++;
         
-        strncat(text_buffer, text, buffer_size - strlen(text_buffer) - 1);
-        strncat(text_buffer, " ", buffer_size - strlen(text_buffer) - 1);
+        strncat(out_text, text, max_len - strlen(out_text) - 1);
+        strncat(out_text, " ", max_len - strlen(out_text) - 1);
     }
 
     // Remove trailing space
-    if (strlen(text_buffer) > 0) {
-        text_buffer[strlen(text_buffer) - 1] = '\0';
+    if (strlen(out_text) > 0) {
+        out_text[strlen(out_text) - 1] = '\0';
     }
 
-    return strlen(text_buffer);
+    return strlen(out_text);
 }
 
 #endif // RECOGNITION_IMPLEMENTATION

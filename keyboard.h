@@ -1,11 +1,9 @@
-#include "logging.h"
-#include <ApplicationServices/ApplicationServices.h>
-
 #ifndef HOTKEY_INCLUDED
 #define HOTKEY_INCLUDED
 
 void keyboard_hotkey_setup( void(*callback)() );
 void keyboard_paste(const char *text);
+void keyboard_get_layout_language(char *lang_buf, size_t buf_size);
 
 #endif // HOTKEY_INCLUDED
 
@@ -104,18 +102,21 @@ void keyboard_paste(const char *text) {
     CFRelease(source);
 }
 
-
-void get_system_language(char *lang_buf, size_t buf_size) {
+void keyboard_get_layout_language(char *lang_buf, size_t buf_size) {
     // Дефолтное значение на случай, если что-то пойдет не так
-    strncpy(lang_buf, "en", buf_size);
+    strncpy(lang_buf, "", buf_size);
 
-    CFLocaleRef current_locale = CFLocaleCopyCurrent();
-    if (current_locale) {
-        CFStringRef lang_code = CFLocaleGetValue(current_locale, kCFLocaleLanguageCode);
-        if (lang_code) {
-            CFStringGetCString(lang_code, lang_buf, buf_size, kCFStringEncodingUTF8);
+    TISInputSourceRef current_source = TISCopyCurrentKeyboardInputSource();
+    if (current_source) {
+        // Просим не ID раскладки, а список языков, которые она вводит!
+        CFArrayRef langs = (CFArrayRef)TISGetInputSourceProperty(current_source, kTISPropertyInputSourceLanguages);
+        
+        if (langs && CFArrayGetCount(langs) > 0) {
+            // Берем первый язык из массива (обычно это 2-буквенный код, типа "ru" или "pl")
+            CFStringRef lang = (CFStringRef)CFArrayGetValueAtIndex(langs, 0);
+            CFStringGetCString(lang, lang_buf, buf_size, kCFStringEncodingUTF8);
         }
-        CFRelease(current_locale);
+        CFRelease(current_source);
     }
 }
 

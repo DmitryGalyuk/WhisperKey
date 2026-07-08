@@ -9,6 +9,7 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <signal.h>
+#include <stdatomic.h> 
 
 #include "gui.h"
 
@@ -23,14 +24,26 @@
 #define AUDIO_IMPLEMENTATION
 #include "audio.h"
 
-time_t last_used_timestamp = 0;
 
-AudioState audio_state;
+typedef struct {
+    float *samples;
+    size_t sample_count;
+    char lang[10];
+} WhisperTask;
+
+
+time_t last_used_timestamp = 0;
+char current_lang[10] = "auto";
 
 char text_buffer[4096]; // Buffer to hold recognized text
 
+static float audio_buffer[CHUNK_SAMPLES]; 
+static WhisperTask background_task;
+static atomic_bool is_whisper_busy = ATOMIC_VAR_INIT(false);
+
 extern int run_hud(int pipe_read_fd);
 extern void check_mic_permission();
+extern void gui_connect_to_window_server();
 
 void *watchdog_thread(void *arg) {
     (void)arg;
@@ -57,60 +70,90 @@ void *watchdog_thread(void *arg) {
 }
 
 
+// --- ФОНОВЫЙ ПОТОК РАСПОЗНАВАНИЯ ---
+void* async_whisper_worker(void* arg) {
+    WhisperTask *task = (WhisperTask*)arg;
 
+    // Вызываем распознавание
+    size_t len = recognize_process_buffer(task->samples, task->sample_count, task->lang, text_buffer, sizeof(text_buffer));
+    
+    if (len > 0) {
+        keyboard_paste(text_buffer);
+    }
+    
+    strncpy(text_buffer, " \0", sizeof(" \0")); // Clear buffer for next use
 
-void hotkey_handler() {
-    // --- TOGGLE LOGIC ---
-        if (!audio_state.is_recording) {
-            // START RECORDING
-            LOG_INFO(">>> TOGGLE: START RECORDING <<<");
-            recognize_ensure_model_loaded();
-            
-            audio_state.is_recording = 1;
-            audio_start_recording(&audio_state);
-            
-            gui_recording();
-            last_used_timestamp = time(NULL);
-        } else {
-            // STOP RECORDING
-            LOG_INFO(">>> TOGGLE: STOP RECORDING & PROCESS <<<");
-            
-            audio_stop_recording(&audio_state);
-
-            gui_waiting();
-
-            text_buffer[0] = '\0'; // Clear the buffer before recognition
-
-            recognize_audio(&audio_state, text_buffer, sizeof(text_buffer));
-            
-            // Here you will eventually trigger whisper_full()
-            keyboard_paste(text_buffer);
-            
-            gui_hide();
-        }
+    // Снимаем блокировку, поток завершает работу
+    atomic_store(&is_whisper_busy, false);
+    return NULL;
 }
 
+// --- КОЛЛБЭК ОТ АУДИО ---
+void on_audio_chunk_ready(const float *samples, size_t sample_count) {
+    // 1. Проверяем, не занят ли еще Whisper (защита от перезаписи буфера)
+    bool expected = false;
+    if (!atomic_compare_exchange_strong(&is_whisper_busy, &expected, true)) {
+        LOG_INFO("Whisper is still processing! Dropping this chunk to avoid memory corruption.");
+        return; 
+    }
+
+    // 2. Копируем данные в наш статичный буфер
+    memcpy(audio_buffer, samples, sample_count * sizeof(float));
+    
+    // 3. Настраиваем структуру задачи
+    background_task.samples = audio_buffer;
+    background_task.sample_count = sample_count;
+    strncpy(background_task.lang, current_lang, sizeof(background_task.lang));
+
+    // 4. Запускаем поток
+    pthread_t tid;
+    pthread_create(&tid, NULL, async_whisper_worker, &background_task);
+    pthread_detach(tid); 
+}
+
+// --- КОЛЛБЭК ОТ КЛАВИАТУРЫ (Нажали хоткей) ---
+void on_hotkey_pressed() {
+    if (!audio_is_recording()) {
+        // СТАРТ
+        keyboard_get_layout_language(current_lang, sizeof(current_lang));
+        LOG_INFO("Starting record. Lang: %s", current_lang);
+        
+        recognize_ensure_model_loaded();
+        audio_start_recording();
+        gui_recording();
+        
+        last_used_timestamp = time(NULL);
+    } else {
+        // СТОП
+        LOG_INFO("Stopping record...");
+        gui_waiting();
+        
+        // Эта функция внутри audio.c должна остановить микрофон 
+        // И СИНХРОННО дергнуть on_audio_chunk_ready() для последнего хвостика аудио
+        audio_stop_recording(); 
+        
+        gui_hide();
+    }
+}
 
 int run_engine(int pipe_write_fd) {
     gui_set_pipe(pipe_write_fd);
-    last_used_timestamp = time(NULL);
     
+    // Инициализируем модули и связываем их через коллбэки
+    audio_init(on_audio_chunk_ready);
+    keyboard_hotkey_setup(on_hotkey_pressed);
     
-    LOG_INFO("Engine process started. PID: %d", getpid());
-    
-    // Check and prompt for permissions FIRST
-    // request_accessibility_permissions();
-    
-    
-    keyboard_hotkey_setup(&hotkey_handler);
+    // Запускаем Watchdog
+    pthread_t wd_tid;
+    pthread_create(&wd_tid, NULL, watchdog_thread, NULL);
+    pthread_detach(wd_tid);
 
-    recognize_ensure_model_loaded();
-    
-    LOG_INFO("Entering CoreFoundation RunLoop...");
+    LOG_INFO("Engine running...");
     CFRunLoopRun();
-    
     return 0;
 }
+
+
 
 int main(int argc, char **argv) {
     // 1. Child process mode (Engine)
