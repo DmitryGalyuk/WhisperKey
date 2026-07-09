@@ -36,6 +36,51 @@ void gui_hide() {
     gui_send_command("hide");
 }
 
+BOOL get_caret_position(NSPoint *outPoint) {
+    AXUIElementRef systemWideElement = AXUIElementCreateSystemWide();
+    AXUIElementRef focusedElement = NULL;
+    BOOL success = NO;
+    
+    // 1. Получаем элемент в фокусе (активное текстовое поле)
+    if (AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedUIElementAttribute, (CFTypeRef *)&focusedElement) == kAXErrorSuccess) {
+        
+        AXValueRef rangeValue = NULL;
+        // 2. Получаем выделенный диапазон (мигающий курсор - это диапазон длиной 0)
+        if (AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextRangeAttribute, (CFTypeRef *)&rangeValue) == kAXErrorSuccess) {
+            
+            CFRange range;
+            if (AXValueGetValue(rangeValue, kAXValueCFRangeType, &range)) {
+                
+                AXValueRef boundsValue = NULL;
+                // 3. Запрашиваем экранные координаты (рамку) для этого курсора
+                if (AXUIElementCopyParameterizedAttributeValue(focusedElement, kAXBoundsForRangeParameterizedAttribute, rangeValue, (CFTypeRef *)&boundsValue) == kAXErrorSuccess) {
+                    
+                    CGRect bounds;
+                    if (AXValueGetValue(boundsValue, kAXValueCGRectType, &bounds)) {
+                        
+                        // Координаты AX (CoreGraphics) идут от левого ВЕРХНЕГО угла.
+                        // Нам нужно перевернуть Y для AppKit (левый НИЖНИЙ угол).
+                        CGFloat screenHeight = CGDisplayBounds(CGMainDisplayID()).size.height;
+                        
+                        // Берем нижнюю левую точку курсора и делаем отступ, 
+                        // чтобы иконка HUD висела чуть правее и ниже самого текста
+                        outPoint->x = bounds.origin.x + 10;
+                        outPoint->y = screenHeight - bounds.origin.y - bounds.size.height - 20; 
+                        
+                        success = YES;
+                    }
+                    if (boundsValue) CFRelease(boundsValue);
+                }
+            }
+            if (rangeValue) CFRelease(rangeValue);
+        }
+        if (focusedElement) CFRelease(focusedElement);
+    }
+    if (systemWideElement) CFRelease(systemWideElement);
+    
+    return success;
+}
+
 void gui_paste(const char *text) {
 if (!text || strlen(text) == 0) return;
 
@@ -109,13 +154,26 @@ void setup_window() {
     [emojiLabel setAlignment:NSTextAlignmentCenter];
     
     [[overlayWindow contentView] addSubview:emojiLabel];
+
+    [overlayWindow center];
     NSLog(@"[HUD] Window initialized successfully.");
 }
 
 void move_window_to_cursor() {
-    NSPoint mouseLoc = [NSEvent mouseLocation];
-    NSPoint windowLoc = NSMakePoint(mouseLoc.x + 20, mouseLoc.y - 80);
-    [overlayWindow setFrameOrigin:windowLoc];
+    NSPoint targetPoint;
+
+    // Пытаемся прицепиться к текстовому курсору
+    if (!get_caret_position(&targetPoint)) {
+        // ФОЛБЭК: Если приложение скрывает курсор (например, не-нативный софт на Electron), 
+        // падаем обратно на старую добрую позицию мыши.
+        NSPoint mouseLoc = [NSEvent mouseLocation];
+        targetPoint = NSMakePoint(mouseLoc.x + 20, mouseLoc.y - 80);
+        NSLog(@"[HUD] Caret not found. Falling back to mouse coordinates.");
+    } else {
+        NSLog(@"[HUD] Caret found! Snapping to text.");
+    }
+
+    [overlayWindow setFrameOrigin:targetPoint];
 }
 
 void start_pipe_listener(int fd) {
