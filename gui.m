@@ -32,6 +32,16 @@ void gui_show(const char *emoji) {
     gui_send_command(emoji);
 }
 
+void play_system_sound(NSString *soundName) {
+    // NSSound работает асинхронно и сам управляет своей памятью при проигрывании
+    NSSound *sound = [NSSound soundNamed:soundName];
+    if (sound) {
+        [sound play];
+    } else {
+        NSLog(@"[HUD] Sound '%@' not found.", soundName);
+    }
+}
+
 BOOL get_caret_position(NSPoint *outPoint) {
     AXUIElementRef systemWideElement = AXUIElementCreateSystemWide();
     AXUIElementRef focusedElement = NULL;
@@ -193,10 +203,12 @@ void start_pipe_listener(int fd) {
         
         dispatch_async(dispatch_get_main_queue(), ^{
             if ([command containsString:@"hide"]) {
+                play_system_sound(@"Pop");
                 [overlayWindow orderOut:nil];
             }
             else {
                 move_window_to_cursor();
+                play_system_sound(@"Tink");
                 [emojiLabel setStringValue:command];
                 [overlayWindow orderFront:nil];
             } 
