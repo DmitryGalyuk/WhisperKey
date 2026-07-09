@@ -64,7 +64,18 @@ void recognize_unload_model() {
 
 // returns the number of characters written to text_buffer (excluding null terminator)
 // -1 in case of error 
-size_t recognize_process_buffer(const float *samples, size_t sample_count, const char *lang, char *out_text, size_t max_len) {
+/** Recognizes speech from the provided audio samples using the Whisper model.
+ * @param samples: Array of audio samples
+ * @param sample_count: Number of samples in the array
+ * @param lang: Language code for recognition (e.g., "en", "ru", "auto")
+ * @param out_text: Buffer to store the recognized text
+ * @param max_len: Maximum length of the output buffer
+ * @returns Number of characters written to out_text (excluding null terminator), or -1 on error
+ * @retval Number of characters written to out_text (excluding null terminator)
+ * @retval -1 if recognition fails or no speech is detected
+ */
+size_t recognize_process_buffer(const float *samples, size_t sample_count, 
+                                const char *lang, char *out_text, size_t max_len) {
     struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     wparams.language = lang; // Or "ru" to force Russian
     wparams.n_threads = 4;

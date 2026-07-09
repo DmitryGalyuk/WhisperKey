@@ -4,15 +4,15 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-// --- ПУБЛИЧНЫЙ ИНТЕРФЕЙС (API) ---
-
-// Тип функции-коллбэка. Оркестратор передаст её нам, чтобы получать звук.
+/**
+ * To provide the business logic once chunk of audio is ready, the audio module will call this callback function.
+ * @param samples: array with data from microphone to be processed by caller
+ * @param sample_count: Number of samples in the array.
+ */
 typedef void (*AudioChunkReadyCallback)(const float *samples, size_t sample_count);
 
-// Инициализация модуля (привязка коллбэка)
 void audio_init(AudioChunkReadyCallback callback);
 
-// Управление микрофоном
 void audio_start_recording(void);
 void audio_stop_recording(void);
 bool audio_is_recording(void);
@@ -20,9 +20,6 @@ bool audio_is_recording(void);
 #endif // AUDIO_H_INCLUDED
 
 
-// ============================================================================
-// ИМПЛЕМЕНТАЦИЯ
-// ============================================================================
 #ifdef AUDIO_IMPLEMENTATION
 
 #include <AudioToolbox/AudioToolbox.h>
@@ -33,7 +30,7 @@ bool audio_is_recording(void);
 #define CHUNK_SEC 10
 #define CHUNK_SAMPLES (SAMPLE_RATE * CHUNK_SEC)
 
-// Внутреннее состояние (скрыто от остального приложения)
+
 typedef struct {
     float record_samples[CHUNK_SAMPLES];
     size_t sample_count;
@@ -45,12 +42,12 @@ typedef struct {
     AudioChunkReadyCallback on_chunk_ready;
 } AudioState;
 
-// Глобальный (но скрытый через static) инстанс состояния
+/**
+ * Internal state of the audio module. It OWNS the recording buffer, the audio queue, and the callback to notify when a chunk is ready.
+ */
 static AudioState audio_state = {0};
 
-// --- Внутренние утилиты ---
 
-// Функция привязки к активному системному микрофону
 static void setup_default_microphone(AudioQueueRef queue) {
     AudioDeviceID defaultDeviceID = kAudioObjectUnknown;
     UInt32 size = sizeof(defaultDeviceID);
@@ -85,7 +82,6 @@ static void setup_default_microphone(AudioQueueRef queue) {
     }
 }
 
-// Отправка накопленного куска в Оркестратор
 static void dispatch_current_chunk() {
     if (audio_state.sample_count > 0 && audio_state.on_chunk_ready) {
         // Дергаем функцию Оркестратора, передавая ей текущий массив и размер
@@ -95,7 +91,16 @@ static void dispatch_current_chunk() {
     }
 }
 
-// Системный коллбэк CoreAudio (вызывается каждые ~100мс)
+/**
+ * Processes the audio data received from the microphone. This function is called by the AudioQueue when a buffer is filled.
+ * It converts the PCM data to float, accumulates it in the internal buffer, and dispatches the chunk when it reaches the defined size.
+ * @param userData: Pointer to the AudioState structure.
+ * @param inAQ: The audio queue that called this callback.
+ * @param inBuffer: The buffer containing the recorded audio data.
+ * @param inStartTime: The time at which the audio data was recorded.
+ * @param inNumberPacketDescriptions: The number of packet descriptions.
+ * @param inPacketDescs: The packet descriptions for the audio data.
+ */
 static void audio_callback(void *userData, AudioQueueRef inAQ, AudioQueueBufferRef inBuffer,
                            const AudioTimeStamp *inStartTime, UInt32 inNumberPacketDescriptions,
                            const AudioStreamPacketDescription *inPacketDescs) {
@@ -125,8 +130,10 @@ static void audio_callback(void *userData, AudioQueueRef inAQ, AudioQueueBufferR
     }
 }
 
-// --- Реализация ПУБЛИЧНОГО API ---
-
+/**
+ * Initializes the audio module and sets up the callback to be called when a chunk of audio is ready for processing.
+ * @param callback: Function pointer to be called when a chunk of audio is ready by the application logic.
+ */
 void audio_init(AudioChunkReadyCallback callback) {
     memset(&audio_state, 0, sizeof(audio_state));
     audio_state.on_chunk_ready = callback;

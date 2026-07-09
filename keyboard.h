@@ -37,7 +37,11 @@ void request_accessibility_permissions() {
 }
 
 
-// Callback, который будет вызываться при каждом нажатии клавиш
+/**
+ * Handles key pressed events. 
+ * If the pressed key matches the Microphone hotkey, it invokes the provided @ref event_handler callback with the application logic.
+ * @ref event_hander is passed to @ref keyboard_hotkey_setup() and should be a function that handles the hotkey action.
+ */
 CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *userInfo) {
     (void)proxy;
     (void)userInfo;
@@ -60,7 +64,11 @@ CGEventRef hotkey_callback(CGEventTapProxy proxy, CGEventType type, CGEventRef e
     return event;
 }
 
-// В функции run_engine вместо Carbon:
+/**
+ * Sets up a global hotkey listener for the Microphone key (keycode 176).
+ * When the hotkey is pressed, it invokes the provided @ref callback function.
+ * @param callback: Function pointer to be called when the hotkey is pressed, saved to modules @ref event_handler
+ */
 void keyboard_hotkey_setup( void(*callback)() ) {
     event_handler = callback;
 
@@ -79,6 +87,9 @@ void keyboard_hotkey_setup( void(*callback)() ) {
 }
 
 
+/**
+ * Retrieves the current keyboard layout's primary language code (e.g., "en", "ru", "pl").
+ */
 void keyboard_get_layout_language(char *lang_buf, size_t buf_size) {
     // Дефолтное значение на случай, если что-то пойдет не так
     strncpy(lang_buf, "", buf_size);

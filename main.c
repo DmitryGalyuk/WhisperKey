@@ -39,7 +39,7 @@ char current_lang[LANG_LENGTH] = "auto";
 
 char text_buffer[4096]; // Buffer to hold recognized text
 
-static float audio_buffer[CHUNK_SAMPLES]; 
+static float audio_buffer_for_recognition[CHUNK_SAMPLES]; 
 static WhisperTask background_task;
 static atomic_bool is_whisper_busy = false;
 
@@ -92,6 +92,12 @@ void* async_whisper_worker(void* arg) {
 }
 
 
+/**
+ * Helper funcction for cases of people using multiple languages and repurpusing the layout. 
+ * For example author lives in Poland and uses Polish layout for both English and Polish but still only speaks English.
+ * @param layout_lang: layout used for text input
+ * @param out_lang: language to be used for Whisper recognition
+ */
 void map_lang(char *layout_lang, char *out_lang) {
     // Простейшая маппинг-функция. Можно расширять по мере необходимости.
     if (strcmp(layout_lang, "ru") == 0) {
@@ -103,33 +109,33 @@ void map_lang(char *layout_lang, char *out_lang) {
     }
 }
 
-// --- КОЛЛБЭК ОТ АУДИО ---
+/**
+ * Called by microphone module when a chunk of audio is ready for processing.
+ * @param samples: array with data from microphone.
+ * @param sample_count: Number of samples in the array.
+ */
 void on_audio_chunk_ready(const float *samples, size_t sample_count) {
-    // 1. Проверяем, не занят ли еще Whisper (защита от перезаписи буфера)
+
     bool expected = false;
     if (!atomic_compare_exchange_strong(&is_whisper_busy, &expected, true)) {
         LOG_INFO("Whisper is still processing! Dropping this chunk to avoid memory corruption.");
         return; 
     }
 
-    // 2. Копируем данные в наш статичный буфер
-    memcpy(audio_buffer, samples, sample_count * sizeof(float));
+    memcpy(audio_buffer_for_recognition, samples, sample_count * sizeof(float));
     
-    // 3. Настраиваем структуру задачи
-    background_task.samples = audio_buffer;
+    background_task.samples = audio_buffer_for_recognition;
     background_task.sample_count = sample_count;
 
     keyboard_get_layout_language(current_lang, sizeof(current_lang));
     map_lang(current_lang, background_task.lang);
 
-    // 4. Запускаем поток
     pthread_t tid;
     pthread_create(&tid, NULL, async_whisper_worker, &background_task);
     pthread_detach(tid); 
 }
 
 
-// --- КОЛЛБЭК ОТ КЛАВИАТУРЫ (Нажали хоткей) ---
 void on_hotkey_pressed() {
     if (!audio_is_recording()) {
         // СТАРТ
@@ -154,6 +160,10 @@ void on_hotkey_pressed() {
 }
 
 
+/**
+ * Runs the Whisper engine in a separate process.
+ * @param pipe_write_fd: File descriptor for writing to the parent UI process.
+ */
 int run_engine(int pipe_write_fd) {
     gui_set_pipe(pipe_write_fd);
     
