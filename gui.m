@@ -224,23 +224,40 @@ void start_pipe_listener(int fd) {
 void setup_menu_bar() {
     NSLog(@"[HUD] Initializing menu bar item...");
     
-    // Создаем элемент в системном трее
     statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     
-    // Можно использовать юникод-иконку микрофона (или любую картинку через NSImage)
-    statusItem.button.title = @"🎙️"; 
+    // Пытаемся найти файл icon.png в папке Resources нашего бандла .app
+    NSString *iconPath = [[NSBundle mainBundle] pathForResource:@"icon" ofType:@"png"];
+    NSImage *customIcon = [[NSImage alloc] initWithContentsOfFile:iconPath];
+    
+    if (customIcon) {
+        // Подгоняем размер под стандарт верхней панели (18x18)
+        [customIcon setSize:NSMakeSize(18, 18)];
+        
+        // МАГИЯ: делаем иконку "шаблонной", чтобы она сама адаптировалась под Dark/Light mode
+        [customIcon setTemplate:YES];
+        
+        statusItem.button.image = customIcon;
+    } else {
+        // ФОЛБЭК: Если файла нет, используем нативную иконку микрофона из SF Symbols (macOS 11+)
+        if (@available(macOS 11.0, *)) {
+            NSImage *sysIcon = [NSImage imageWithSystemSymbolName:@"mic.fill" accessibilityDescription:@"Microphone"];
+            [sysIcon setTemplate:YES];
+            statusItem.button.image = sysIcon;
+        } else {
+            // Совсем старая macOS - падаем обратно на эмодзи
+            statusItem.button.title = @"🎙️"; 
+        }
+    }
+    
     statusItem.button.toolTip = @"WhisperKey is running";
     
-    // Создаем само меню
+    // Создаем меню
     NSMenu *menu = [[NSMenu alloc] init];
-    
-    // Добавляем пункт "Quit"
     NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit WhisperKey"
-                                                      action:@selector(terminate:) // Стандартный экшен закрытия NSApp
+                                                      action:@selector(terminate:) 
                                                keyEquivalent:@"q"];
     [menu addItem:quitItem];
-    
-    // Привязываем меню к иконке
     statusItem.menu = menu;
 }
 
