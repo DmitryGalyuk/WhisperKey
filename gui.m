@@ -7,6 +7,8 @@
 
 NSWindow *overlayWindow;
 NSTextField *emojiLabel;
+NSStatusItem *statusItem;
+
 
 int ipc_fd = -1;
 
@@ -219,6 +221,29 @@ void start_pipe_listener(int fd) {
 }
 
 
+void setup_menu_bar() {
+    NSLog(@"[HUD] Initializing menu bar item...");
+    
+    // Создаем элемент в системном трее
+    statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
+    
+    // Можно использовать юникод-иконку микрофона (или любую картинку через NSImage)
+    statusItem.button.title = @"🎙️"; 
+    statusItem.button.toolTip = @"WhisperKey is running";
+    
+    // Создаем само меню
+    NSMenu *menu = [[NSMenu alloc] init];
+    
+    // Добавляем пункт "Quit"
+    NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit WhisperKey"
+                                                      action:@selector(terminate:) // Стандартный экшен закрытия NSApp
+                                               keyEquivalent:@"q"];
+    [menu addItem:quitItem];
+    
+    // Привязываем меню к иконке
+    statusItem.menu = menu;
+}
+
 void check_mic_permission() {
     LOG_INFO("[MAIN] Checking Microphone permissions...");
     if (@available(macOS 10.14, *)) {
@@ -257,6 +282,7 @@ int gui_run(int pipe_read_fd) {
         [app setActivationPolicy:NSApplicationActivationPolicyAccessory]; // Hide from Dock
         
         setup_window();
+        setup_menu_bar();
         start_pipe_listener(pipe_read_fd);
         
         LOG_INFO("[HUD] Entering main UI runloop...");
