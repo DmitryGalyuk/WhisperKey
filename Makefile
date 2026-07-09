@@ -51,24 +51,5 @@ app: clean release
 		sips -z 18 18 icon.png --out $(RESOURCES_DIR)/icon.png > /dev/null; \
 	fi
 	
-	@echo '<?xml version="1.0" encoding="UTF-8"?>\n\
-	<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n\
-	<plist version="1.0">\n\
-	<dict>\n\
-		<key>CFBundleExecutable</key>\n\
-		<string>WhisperKey</string>\n\
-		<key>CFBundleIdentifier</key>\n\
-		<string>com.local.WhisperKey</string>\n\
-		<key>CFBundleName</key>\n\
-		<string>WhisperKey</string>\n\
-		<key>CFBundlePackageType</key>\n\
-		<string>APPL</string>\n\
-		<key>LSUIElement</key>\n\
-		<true/>\n\
-		<key>NSMicrophoneUsageDescription</key>\n\
-		<string>WhisperKey needs microphone access to dictate text.</string>\n\
-		<key>CFBundleIconFile</key>\n\
-		<string>AppIcon</string>\n\
-	</dict>\n\
-	</plist>' > $(CONTENTS_DIR)/Info.plist
+	@cp Info.plist $(CONTENTS_DIR)/Info.plist
 	@echo "✅ Done! Application is ready at ./$(APP_DIR)"
