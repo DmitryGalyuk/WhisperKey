@@ -22,7 +22,7 @@ struct whisper_context *ctx = NULL;
 
 void recognize_ensure_model_loaded() {
     if (ctx == NULL) {
-        gui_waiting();
+        gui_show("⏳");
         LOG_INFO("Loading Whisper model into RAM...");
         
         struct whisper_context_params cparams = whisper_context_default_params();

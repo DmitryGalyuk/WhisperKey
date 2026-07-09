@@ -137,13 +137,13 @@ void on_hotkey_pressed() {
         
         recognize_ensure_model_loaded();
         audio_start_recording();
-        gui_recording();
+        gui_show("🎙️");
         
         last_used_timestamp = time(NULL);
     } else {
         // СТОП
         LOG_INFO("Stopping record...");
-        gui_waiting();
+        gui_show("⏳");
         
         // Эта функция внутри audio.c должна остановить микрофон 
         // И СИНХРОННО дергнуть on_audio_chunk_ready() для последнего хвостика аудио

@@ -24,16 +24,12 @@ void gui_set_pipe(int fd) {
     LOG_DEBUG("IPC pipe set to FD: %d", ipc_fd);
 }
 
-void gui_recording() {
-    gui_send_command("show_mic");
-}
-
-void gui_waiting() {
-    gui_send_command("show_wait");
-}
-
 void gui_hide() {
     gui_send_command("hide");
+}
+
+void gui_show(const char *emoji) {
+    gui_send_command(emoji);
 }
 
 BOOL get_caret_position(NSPoint *outPoint) {
@@ -196,18 +192,14 @@ void start_pipe_listener(int fd) {
         NSLog(@"[HUD] Received command from Engine: %@", [command stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]]);
         
         dispatch_async(dispatch_get_main_queue(), ^{
-            if ([command containsString:@"show_mic"]) {
-                [emojiLabel setStringValue:@"🎙️"];
-                move_window_to_cursor();
-                [overlayWindow orderFront:nil];
-            } 
-            else if ([command containsString:@"show_wait"]) {
-                [emojiLabel setStringValue:@"📝"];
-                [overlayWindow orderFront:nil];
-            } 
-            else if ([command containsString:@"hide"]) {
+            if ([command containsString:@"hide"]) {
                 [overlayWindow orderOut:nil];
             }
+            else {
+                move_window_to_cursor();
+                [emojiLabel setStringValue:command];
+                [overlayWindow orderFront:nil];
+            } 
         });
     });
     
