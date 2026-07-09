@@ -11,8 +11,6 @@ NSTextField *emojiLabel;
 int ipc_fd = -1;
 
 
-
-
 void gui_send_command(const char *cmd) {
     if (ipc_fd != -1) {
         write(ipc_fd, cmd, strlen(cmd));
@@ -38,7 +36,55 @@ void gui_hide() {
     gui_send_command("hide");
 }
 
+void gui_paste(const char *text) {
+if (!text || strlen(text) == 0) return;
 
+    NSPasteboard *pb = [NSPasteboard generalPasteboard];
+    
+    // 1. Читаем текущие элементы
+    NSArray<NSPasteboardItem *> *oldItems = [pb pasteboardItems];
+    NSMutableArray<NSPasteboardItem *> *clonedItems = [NSMutableArray array];
+    
+    // КЛОНИРУЕМ каждый элемент (глубокая копия данных), чтобы отвязать их от старого поколения буфера
+    if (oldItems) {
+        for (NSPasteboardItem *item in oldItems) {
+            NSPasteboardItem *clonedItem = [[NSPasteboardItem alloc] init];
+            for (NSPasteboardType type in item.types) {
+                NSData *data = [item dataForType:type];
+                if (data) {
+                    [clonedItem setData:data forType:type];
+                }
+            }
+            [clonedItems addObject:clonedItem];
+        }
+    }
+    
+    // 2. Кладем наш распознанный текст (это увеличит счетчик поколений буфера)
+    [pb clearContents];
+    [pb setString:[NSString stringWithUTF8String:text] forType:NSPasteboardTypeString];
+    
+    // 3. Эмулируем Cmd+V
+    CGEventSourceRef source = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
+    CGEventRef vDown = CGEventCreateKeyboardEvent(source, (CGKeyCode)9, true);
+    CGEventSetFlags(vDown, kCGEventFlagMaskCommand);
+    CGEventRef vUp = CGEventCreateKeyboardEvent(source, (CGKeyCode)9, false);
+    
+    CGEventPost(kCGHIDEventTap, vDown);
+    CGEventPost(kCGHIDEventTap, vUp);
+    
+    CFRelease(vDown);
+    CFRelease(vUp);
+    CFRelease(source);
+    
+    // 4. Ждем 50 мс, чтобы приложение успело переварить вставку
+    usleep(50000); 
+    
+    // 5. Возвращаем наши КЛОНИРОВАННЫЕ элементы на место!
+    [pb clearContents];
+    if (clonedItems.count > 0) {
+        [pb writeObjects:clonedItems];
+    }
+}
 
 
 void setup_window() {
@@ -141,7 +187,7 @@ void check_mic_permission() {
     }
 }
 
-int run_hud(int pipe_read_fd) {
+int gui_run(int pipe_read_fd) {
     @autoreleasepool {
         LOG_INFO("[HUD] Process started. PID: %d", getpid());
         

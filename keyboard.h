@@ -2,7 +2,6 @@
 #define HOTKEY_INCLUDED
 
 void keyboard_hotkey_setup( void(*callback)() );
-void keyboard_paste(const char *text);
 void keyboard_get_layout_language(char *lang_buf, size_t buf_size);
 
 #endif // HOTKEY_INCLUDED
@@ -79,28 +78,6 @@ void keyboard_hotkey_setup( void(*callback)() ) {
     CGEventTapEnable(eventTap, true);
 }
 
-void keyboard_paste(const char *text) {
-    if (!text || strlen(text) == 0) return;
-    
-    LOG_INFO("Pasting text to active window: %s", text);
-    
-    char cmd[4096];
-    snprintf(cmd, sizeof(cmd), "printf '%%s' '%s' | pbcopy", text);
-    system(cmd);
-
-    // Emulate Cmd+V
-    CGEventSourceRef source = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
-    CGEventRef vDown = CGEventCreateKeyboardEvent(source, (CGKeyCode)9, true);
-    CGEventSetFlags(vDown, kCGEventFlagMaskCommand);
-    CGEventRef vUp = CGEventCreateKeyboardEvent(source, (CGKeyCode)9, false);
-    
-    CGEventPost(kCGHIDEventTap, vDown);
-    CGEventPost(kCGHIDEventTap, vUp);
-    
-    CFRelease(vDown);
-    CFRelease(vUp);
-    CFRelease(source);
-}
 
 void keyboard_get_layout_language(char *lang_buf, size_t buf_size) {
     // Дефолтное значение на случай, если что-то пойдет не так

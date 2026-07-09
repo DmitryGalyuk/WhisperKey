@@ -66,12 +66,11 @@ void recognize_unload_model() {
 // -1 in case of error 
 size_t recognize_process_buffer(const float *samples, size_t sample_count, const char *lang, char *out_text, size_t max_len) {
     struct whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
-    wparams.language = "ru"; // Or "ru" to force Russian
+    wparams.language = lang; // Or "ru" to force Russian
     wparams.n_threads = 4;
     wparams.print_progress = false;
     wparams.print_timestamps = false;
-    // wparams.no_context = true;
-    wparams.no_context = false;
+    wparams.no_context = true;
     
     // Run neural network
     if (whisper_full(ctx, wparams, samples, sample_count) != 0) {

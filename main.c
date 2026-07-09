@@ -24,26 +24,29 @@
 #define AUDIO_IMPLEMENTATION
 #include "audio.h"
 
+#define LANG_LENGTH 10
 
 typedef struct {
     float *samples;
     size_t sample_count;
-    char lang[10];
+    char lang[LANG_LENGTH];
 } WhisperTask;
 
 
 time_t last_used_timestamp = 0;
-char current_lang[10] = "auto";
+
+char current_lang[LANG_LENGTH] = "auto";
 
 char text_buffer[4096]; // Buffer to hold recognized text
 
 static float audio_buffer[CHUNK_SAMPLES]; 
 static WhisperTask background_task;
-static atomic_bool is_whisper_busy = ATOMIC_VAR_INIT(false);
+static atomic_bool is_whisper_busy = false;
 
-extern int run_hud(int pipe_read_fd);
+extern int gui_run(int pipe_read_fd);
 extern void check_mic_permission();
 extern void gui_connect_to_window_server();
+extern void gui_paste(const char *text);
 
 void *watchdog_thread(void *arg) {
     (void)arg;
@@ -78,7 +81,7 @@ void* async_whisper_worker(void* arg) {
     size_t len = recognize_process_buffer(task->samples, task->sample_count, task->lang, text_buffer, sizeof(text_buffer));
     
     if (len > 0) {
-        keyboard_paste(text_buffer);
+        gui_paste(text_buffer);
     }
     
     strncpy(text_buffer, " \0", sizeof(" \0")); // Clear buffer for next use
@@ -86,6 +89,18 @@ void* async_whisper_worker(void* arg) {
     // Снимаем блокировку, поток завершает работу
     atomic_store(&is_whisper_busy, false);
     return NULL;
+}
+
+
+void map_lang(char *layout_lang, char *out_lang) {
+    // Простейшая маппинг-функция. Можно расширять по мере необходимости.
+    if (strcmp(layout_lang, "ru") == 0) {
+        strncpy(out_lang, "ru", LANG_LENGTH);
+    } else if (strcmp(layout_lang, "pl") == 0) {
+        strncpy(out_lang, "en", LANG_LENGTH);
+    } else {
+        strncpy(out_lang, "auto", LANG_LENGTH); // По умолчанию
+    }
 }
 
 // --- КОЛЛБЭК ОТ АУДИО ---
@@ -103,7 +118,9 @@ void on_audio_chunk_ready(const float *samples, size_t sample_count) {
     // 3. Настраиваем структуру задачи
     background_task.samples = audio_buffer;
     background_task.sample_count = sample_count;
-    strncpy(background_task.lang, current_lang, sizeof(background_task.lang));
+
+    keyboard_get_layout_language(current_lang, sizeof(current_lang));
+    map_lang(current_lang, background_task.lang);
 
     // 4. Запускаем поток
     pthread_t tid;
@@ -111,11 +128,11 @@ void on_audio_chunk_ready(const float *samples, size_t sample_count) {
     pthread_detach(tid); 
 }
 
+
 // --- КОЛЛБЭК ОТ КЛАВИАТУРЫ (Нажали хоткей) ---
 void on_hotkey_pressed() {
     if (!audio_is_recording()) {
         // СТАРТ
-        keyboard_get_layout_language(current_lang, sizeof(current_lang));
         LOG_INFO("Starting record. Lang: %s", current_lang);
         
         recognize_ensure_model_loaded();
@@ -214,6 +231,6 @@ int main(int argc, char **argv) {
     printf("[MAIN] Router successfully spawned Engine (PID: %d). Starting HUD...\n", pid);
     fflush(stdout);
     
-    return run_hud(pipefd[0]);
+    return gui_run(pipefd[0]);
 }
 
