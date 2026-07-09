@@ -109,10 +109,6 @@ size_t recognize_process_buffer(const float *samples, size_t sample_count,
         strncat(out_text, " ", max_len - strlen(out_text) - 1);
     }
 
-    // Remove trailing space
-    if (strlen(out_text) > 0) {
-        out_text[strlen(out_text) - 1] = '\0';
-    }
 
     return strlen(out_text);
 }

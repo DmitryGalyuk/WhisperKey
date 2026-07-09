@@ -84,7 +84,7 @@ void* async_whisper_worker(void* arg) {
         gui_paste(text_buffer);
     }
     
-    strncpy(text_buffer, " \0", sizeof(" \0")); // Clear buffer for next use
+    strncpy(text_buffer, "\0", sizeof("\0")); // Clear buffer for next use
 
     // Снимаем блокировку, поток завершает работу
     atomic_store(&is_whisper_busy, false);
