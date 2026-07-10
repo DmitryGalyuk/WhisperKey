@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <math.h>
 
 /**
  * To provide the business logic once chunk of audio is ready, the audio module will call this callback function.
@@ -30,6 +31,11 @@ bool audio_is_recording(void);
 #define CHUNK_SEC 10
 #define CHUNK_SAMPLES (SAMPLE_RATE * CHUNK_SEC)
 
+#define MIN_CHUNK_SAMPLES (SAMPLE_RATE * 3) // minimum 3 seconds
+#define MAX_CHUNK_SAMPLES (SAMPLE_RATE * 10) // maximum 10 seconds
+#define SILENCE_THRESHOLD 0.005f // audio level below which we consider it silence
+#define SILENCE_FRAMES_REQ 5 // dutation of the silence in frames (each frame is ~100ms) to consider the chunk complete
+
 
 typedef struct {
     float record_samples[CHUNK_SAMPLES];
@@ -38,6 +44,8 @@ typedef struct {
     AudioQueueRef queue;
     AudioQueueBufferRef buffers[3];
     bool is_recording;
+
+    int silence_frames;
     
     AudioChunkReadyCallback on_chunk_ready;
 } AudioState;
@@ -82,14 +90,32 @@ static void setup_default_microphone(AudioQueueRef queue) {
     }
 }
 
-static void dispatch_current_chunk() {
-    if (audio_state.sample_count > 0 && audio_state.on_chunk_ready) {
-        // Дергаем функцию Оркестратора, передавая ей текущий массив и размер
-        audio_state.on_chunk_ready(audio_state.record_samples, audio_state.sample_count);
-        // Обнуляем счетчик, микрофон начнет писать с начала буфера
-        audio_state.sample_count = 0;
+bool is_silent_audio_chunk(const float *samples, size_t sample_count) {
+    float sum_squares = 0.0f;
+    for (size_t i = 0; i < sample_count; i++) {
+        sum_squares += samples[i] * samples[i];
     }
+    float rms = sqrtf(sum_squares / sample_count);
+    
+    if (rms < SILENCE_THRESHOLD) {
+        LOG_INFO("Detected silent audio chunk. RMS: %.5f", rms);
+    }
+
+    return rms < SILENCE_THRESHOLD;
 }
+static void dispatch_current_chunk() {
+    // only send non-silent chunks to the application logic
+    if (audio_state.sample_count > 0 
+        && audio_state.on_chunk_ready
+        && !is_silent_audio_chunk(audio_state.record_samples, audio_state.sample_count)
+        ){
+        
+            audio_state.on_chunk_ready(audio_state.record_samples, audio_state.sample_count);
+    }
+    // but reset the samples count since we processed the chunk
+    audio_state.sample_count = 0;
+}
+
 
 /**
  * Processes the audio data received from the microphone. This function is called by the AudioQueue when a buffer is filled.
@@ -111,20 +137,35 @@ static void audio_callback(void *userData, AudioQueueRef inAQ, AudioQueueBufferR
     AudioState *state = (AudioState*)userData;
     if (!state->is_recording) return;
 
-    int16_t *pcm = (int16_t*)inBuffer->mAudioData;
+ int16_t *pcm = (int16_t*)inBuffer->mAudioData;
     UInt32 num_samples = inBuffer->mAudioDataByteSize / sizeof(int16_t);
 
+    float sum_squares = 0.0f;
+
     for (UInt32 i = 0; i < num_samples; i++) {
-        // Если накопили ровно 10 секунд — сбрасываем чанк
-        if (state->sample_count >= CHUNK_SAMPLES) {
-            dispatch_current_chunk();
-        }
-        
-        // Продолжаем запись
-        state->record_samples[state->sample_count++] = (float)pcm[i] / 32768.0f;
+        float sample = (float)pcm[i] / 32768.0f;
+        sum_squares += sample * sample;
+        state->record_samples[state->sample_count++] = sample;
     }
 
-    // Возвращаем буфер системе на "карусель"
+    // volume of the current 100ms frame (RMS)
+    float rms = sqrtf(sum_squares / num_samples);
+    
+    if (rms < SILENCE_THRESHOLD) {
+        state->silence_frames++;
+    } else {
+        state->silence_frames = 0;
+    }
+
+    // Pass the chunk to the application if we have enough samples or if we have detected enough silence frames
+    if (state->sample_count >= MAX_CHUNK_SAMPLES || 
+       (state->sample_count >= MIN_CHUNK_SAMPLES && state->silence_frames >= SILENCE_FRAMES_REQ)) {
+        
+        dispatch_current_chunk();
+        state->silence_frames = 0;
+    }
+
+    // Rotate the buffer back into the queue if still recording
     if (state->is_recording) {
         AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
     }
