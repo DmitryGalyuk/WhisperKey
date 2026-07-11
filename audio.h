@@ -31,10 +31,10 @@ bool audio_is_recording(void);
 #define CHUNK_SEC 10
 #define CHUNK_SAMPLES (SAMPLE_RATE * CHUNK_SEC)
 
-#define MIN_CHUNK_SAMPLES (SAMPLE_RATE * 3) // minimum 3 seconds
+#define MIN_CHUNK_SAMPLES (SAMPLE_RATE * 5) // minimum 3 seconds
 #define MAX_CHUNK_SAMPLES (SAMPLE_RATE * 10) // maximum 10 seconds
 #define SILENCE_THRESHOLD 0.005f // audio level below which we consider it silence
-#define SILENCE_FRAMES_REQ 5 // dutation of the silence in frames (each frame is ~100ms) to consider the chunk complete
+#define SILENCE_FRAMES_REQ 5 // duration of the silence in frames (each frame is ~100ms) to consider the chunk complete
 
 
 typedef struct {
@@ -91,6 +91,8 @@ static void setup_default_microphone(AudioQueueRef queue) {
 }
 
 bool is_silent_audio_chunk(const float *samples, size_t sample_count) {
+    if (sample_count == 0) return true;
+
     float sum_squares = 0.0f;
     for (size_t i = 0; i < sample_count; i++) {
         sum_squares += samples[i] * samples[i];
@@ -103,52 +105,61 @@ bool is_silent_audio_chunk(const float *samples, size_t sample_count) {
 
     return rms < SILENCE_THRESHOLD;
 }
+
 static void dispatch_current_chunk() {
     // only send non-silent chunks to the application logic
+    LOG_DEBUG("[AUDIO] trying to dispatch %zu samples", audio_state.sample_count);
     if (audio_state.sample_count > 0 
         && audio_state.on_chunk_ready
         && !is_silent_audio_chunk(audio_state.record_samples, audio_state.sample_count)
         ){
-        
+            LOG_DEBUG("[AUDIO] not silent - sending");
             audio_state.on_chunk_ready(audio_state.record_samples, audio_state.sample_count);
     }
-    // but reset the samples count since we processed the chunk
+    // reset the samples count since we processed the chunk
     audio_state.sample_count = 0;
 }
 
-
 /**
  * Processes the audio data received from the microphone. This function is called by the AudioQueue when a buffer is filled.
- * It converts the PCM data to float, accumulates it in the internal buffer, and dispatches the chunk when it reaches the defined size.
- * @param userData: Pointer to the AudioState structure.
- * @param inAQ: The audio queue that called this callback.
- * @param inBuffer: The buffer containing the recorded audio data.
- * @param inStartTime: The time at which the audio data was recorded.
- * @param inNumberPacketDescriptions: The number of packet descriptions.
- * @param inPacketDescs: The packet descriptions for the audio data.
  */
-static void audio_callback(void *userData, AudioQueueRef inAQ, AudioQueueBufferRef inBuffer,
-                           const AudioTimeStamp *inStartTime, UInt32 inNumberPacketDescriptions,
-                           const AudioStreamPacketDescription *inPacketDescs) {
-    (void)inStartTime;
-    (void)inNumberPacketDescriptions;
-    (void)inPacketDescs;
+static void audio_callback(
+    void *inUserData, 
+    AudioQueueRef inAQ, 
+    AudioQueueBufferRef inBuffer, 
+    const AudioTimeStamp *inStartTime, 
+    UInt32 inNumberPacketDescriptions, 
+    const AudioStreamPacketDescription *inPacketDescs) 
+{
+    (void) inStartTime;
+    (void) inNumberPacketDescriptions;
+    (void) inPacketDescs;
 
-    AudioState *state = (AudioState*)userData;
+    AudioState *state = (AudioState *)inUserData;
+    
     if (!state->is_recording) return;
 
- int16_t *pcm = (int16_t*)inBuffer->mAudioData;
+    int16_t *pcm = (int16_t*)inBuffer->mAudioData;
     UInt32 num_samples = inBuffer->mAudioDataByteSize / sizeof(int16_t);
 
     float sum_squares = 0.0f;
 
+    // 1. ЦИКЛ ПО СЭМПЛАМ (с защитой от переполнения)
     for (UInt32 i = 0; i < num_samples; i++) {
+        
+        // --- ЖЕСТКИЙ ЛИМИТ (HARD LIMIT) ---
+        if (state->sample_count >= CHUNK_SAMPLES) {
+            dispatch_current_chunk(); // Внутри сам сделает state->sample_count = 0
+            state->silence_frames = 0;
+        }
+
+        // Конвертируем и безопасно пишем сэмпл
         float sample = (float)pcm[i] / 32768.0f;
         sum_squares += sample * sample;
         state->record_samples[state->sample_count++] = sample;
     }
 
-    // volume of the current 100ms frame (RMS)
+    // 2. ЛОГИКА ПО ТИШИНЕ (SOFT LIMIT)
     float rms = sqrtf(sum_squares / num_samples);
     
     if (rms < SILENCE_THRESHOLD) {
@@ -157,18 +168,14 @@ static void audio_callback(void *userData, AudioQueueRef inAQ, AudioQueueBufferR
         state->silence_frames = 0;
     }
 
-    // Pass the chunk to the application if we have enough samples or if we have detected enough silence frames
-    if (state->sample_count >= MAX_CHUNK_SAMPLES || 
-       (state->sample_count >= MIN_CHUNK_SAMPLES && state->silence_frames >= SILENCE_FRAMES_REQ)) {
-        
+    // Если наговорили минимальный кусок И наступила тишина — отрезаем чанк
+    if (state->sample_count >= MIN_CHUNK_SAMPLES && state->silence_frames >= SILENCE_FRAMES_REQ) {
         dispatch_current_chunk();
         state->silence_frames = 0;
     }
 
-    // Rotate the buffer back into the queue if still recording
-    if (state->is_recording) {
-        AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
-    }
+    // ВАЖНО: Возвращаем отработанный буфер обратно в очередь CoreAudio!
+    AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
 }
 
 /**
@@ -185,6 +192,7 @@ void audio_start_recording(void) {
     if (audio_state.is_recording) return;
 
     audio_state.sample_count = 0;
+    audio_state.silence_frames = 0;
     audio_state.is_recording = true;
 
     AudioStreamBasicDescription format = {0};
