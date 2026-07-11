@@ -191,8 +191,8 @@ void on_audio_chunk_ready(const float *samples, size_t sample_count) {
         LOG_DEBUG("[MAIN] Added chunk to queue. Total items: %d", audio_queue.count);
         
         // Обновляем язык
-        keyboard_get_layout_language(current_lang, sizeof(current_lang));
-        map_lang(current_lang, current_lang);
+        // keyboard_get_layout_language(current_lang, sizeof(current_lang));
+        // map_lang(current_lang, current_lang);
 
         // Будим поток распознавания
         pthread_cond_signal(&whisper_cond);
