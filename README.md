@@ -1,56 +1,61 @@
 # WhisperKey
 
-A lightweight, background macOS daemon that hijacks the native microphone/dictation button (key code 176) to record audio, transcribe it locally using AI, and instantly paste the text into your active window.
+A local, lightweight, and fast voice dictation tool for macOS. It lives in your menu bar, triggers via native Microphone hotkey, and converts speech to text directly on your device using neural networks (`whisper.cpp` / `ggml`).
 
-Zero UI clutter. Pure C. Relies on native macOS accessibility hooks and system audio feedback.
+No cloud processing, no subscriptions, and no data leaks. Written in pure C and Objective-C.
 
 ## Features
-* **Global Hotkey:** Listens for the hardware microphone button out of the box.
-* **Local Processing:** Audio is transcribed entirely offline.
-* **Audio Feedback:** Uses native macOS system sounds (`afplay`) to signal recording start, processing, and successful paste.
-* **Clean & Async:** Background threads handle the heavy lifting (FFmpeg and AI inference) without blocking the macOS event loop.
-* **Auto-Cleanup:** Temporary `.wav` and `.txt` files are automatically deleted after insertion.
 
-## Dependencies
+* **Fully Local:** Your audio never leaves your Mac. Everything is processed on-device.
+* **Smart VAD (Voice Activity Detection):** Chunks speech based on natural pauses rather than hard timers. This ensures better context and accurate punctuation.
+* **High Performance:** Built with thread-safe Ring Buffers and native APIs (CoreAudio, AppKit) to keep system impact close to zero. The audio thread never blocks.
+* **Low Memory Footprint:** The UI and engine run in isolated processes. To save RAM, quantized models are highly recommended.
 
-You need to have `ffmpeg` and `whisper.cpp` installed on your Mac. The easiest way is via Homebrew:
+## Requirements
 
+* macOS (optimized for Apple Silicon / M-series).
+* Xcode Command Line Tools. If you don't have them, run:
 ```bash
-brew install ffmpeg whisper-cpp
+xcode-select --install
+
 ```
 
-**Note**: You also need a Whisper model (e.g., ggml-medium.bin or ggml-small.bin). You can download them directly from the official HuggingFace repository.
 
-## Building
-Compile the C code using gcc or clang. The only required framework is ApplicationServices for the keyboard hooks.
+* `whisper.cpp` and `ggml` libraries (can be installed via Homebrew).
 
+## Build Instructions
+
+Since the app is not signed with a paid Apple Developer certificate (which would trigger Gatekeeper warnings), you need to build it locally. The process takes less than a minute.
+
+1. Clone the repository:
 ```bash
-gcc main.c -o WhisperKey -framework ApplicationServices
+git clone https://github.com/YOUR_ACCOUNT/WhisperKey.git
+cd WhisperKey
+
 ```
+
+
+2. Download a Whisper model. A quantized `medium` model (e.g., `ggml-medium-q5_1.bin`) is highly recommended—it provides excellent accuracy while using only ~550 MB of RAM.
+*Place the model in the path specified in the source code (default is `/opt/homebrew/share/whisper-cpp/models/ggml-medium.bin`—update the path in the code if yours is located elsewhere).*
+3. Build the macOS app bundle:
+```bash
+make app
+
+```
+
+
+
+The compiled `WhisperKey.app` will appear in the `bin/` directory.
 
 ## Usage
-Run the compiled binary from the terminal, passing the absolute path to your downloaded Whisper model as the only argument:
 
-```bash
-./WhisperKey /path/to/your/models/ggml-small.bin
-```
+1. Run `WhisperKey.app` from the `bin/` folder.
+2. On the first launch, macOS will request two permissions required for the app to function:
+* **Microphone** — to capture your voice.
+* **Accessibility** — to automatically paste the recognized text into your active window.
 
-## Important: Accessibility Permissions
-On the first run, macOS will block the event tap. You must grant Accessibility permissions to your Terminal app (or the compiled binary):
 
-Go to System Settings -> Privacy & Security -> Accessibility.
+3. A microphone icon will appear in your menu bar.
+4. Press the global hotkey *(insert your hotkey here, e.g., Cmd + Option + Space)* to start recording. The icon will change to indicate active recording.
+5. Dictate your text, then press the hotkey again to stop. The recognized text will be instantly typed wherever your cursor is currently active.
 
-Add/Enable your Terminal (e.g., iTerm2, Alacritty, or default Terminal).
-
-Restart the app.
-
-## How It Works
-Press the microphone key. You will hear a short Tink sound.
-
-Speak your text.
-
-Press the microphone key again to stop. You will hear a Pop sound.
-
-Whisper processes the audio in the background.
-
-The transcribed text is pasted into your currently focused text field via a simulated Cmd+V, followed by a Glass sound.
